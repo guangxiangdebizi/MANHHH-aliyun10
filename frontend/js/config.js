@@ -199,6 +199,35 @@ class ConfigManager {
         
         return `${currentProtocol}://${currentHost}:${configPort}${endpoint}`;
     }
+
+    async fetchPrompts(options = {}) {
+        if (!this.isLoaded) {
+            await this.loadConfig();
+        }
+        const params = new URLSearchParams();
+        if (options.limit) {
+            params.set('limit', String(options.limit));
+        }
+        params.set('t', String(Date.now()));
+        const url = this.getFullApiUrl(`/api/prompts?${params.toString()}`);
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`示例问句获取失败: HTTP ${response.status}`);
+        }
+        const json = await response.json();
+        if (!json.success) {
+            throw new Error(json.detail || '示例问句接口返回失败');
+        }
+        if (Array.isArray(json.data && json.data.prompts)) {
+            return json.data;
+        }
+        throw new Error('示例问句数据格式不正确');
+    }
+    
+    getBackendConfig() {
+        this._ensureConfigLoaded();
+        return this.config.backend;
+    }
 }
 
 // 创建全局配置管理器实例

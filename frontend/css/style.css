@@ -270,6 +270,58 @@ body {
     margin-bottom: 0.5rem;
 }
 
+.quick-prompts {
+    margin-top: 1.75rem;
+    text-align: center;
+}
+
+.quick-prompts h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.75rem;
+}
+
+.quick-prompt-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.quick-prompt-btn {
+    padding: 0.5rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid #cbd5e0;
+    background: #edf2f7;
+    color: #2d3748;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 1px 2px rgba(160, 174, 192, 0.25);
+}
+
+.quick-prompt-btn:hover {
+    background: #e2e8f0;
+    border-color: #a0aec0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(66, 153, 225, 0.18);
+}
+
+.quick-prompt-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(66, 153, 225, 0.2);
+}
+
+.quick-prompt-empty {
+    width: 100%;
+    font-size: 0.85rem;
+    color: #a0aec0;
+}
+
 /* 消息气泡 */
 .message {
     display: flex;
@@ -938,6 +990,16 @@ body {
     
     .input-hint {
         font-size: 0.625rem;
+    }
+
+    .quick-prompt-list {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .quick-prompt-btn {
+        justify-content: center;
+        width: 100%;
     }
     
     /* 移动端工具结果优化 */

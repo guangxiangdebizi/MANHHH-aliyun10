@@ -4,9 +4,12 @@
 """
 
 from datetime import datetime
+import os
+import json
 from fastapi import APIRouter, HTTPException, Request
 from app_main.auth import _auth_user_from_request, get_chat_db
 from app_main.connection import ConnectionManager
+import random
 
 # 创建路由器
 status_router = APIRouter(prefix="/api", tags=["status"])
@@ -57,6 +60,46 @@ async def get_models(request: Request):
         return {"success": True, "data": base}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取模型列表失败: {str(e)}")
+
+
+
+def _load_prompt_config() -> list[str]:
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    config_path = os.path.join(backend_dir, "config", "quick_prompts.json")
+    if not os.path.exists(config_path):
+        return []
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            prompts = data.get("prompts")
+            if isinstance(prompts, list):
+                return [str(item) for item in prompts]
+            return []
+        elif isinstance(data, list):
+            return [str(item) for item in data]
+        else:
+            return []
+    except Exception:
+        return []
+
+
+@status_router.get("/prompts")
+async def get_quick_prompts(limit: int = 4):
+    prompts = _load_prompt_config()
+    if limit <= 0:
+        limit = 1
+    if prompts:
+        sample = random.sample(prompts, k=min(limit, len(prompts)))
+    else:
+        sample = []
+    return {
+        "success": True,
+        "data": {
+            "prompts": sample,
+            "total": len(prompts),
+        },
+    }
 
 @status_router.get("/status")
 async def get_status():

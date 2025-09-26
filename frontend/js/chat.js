@@ -21,6 +21,9 @@ class ChatApp {
         
         this.pendingEdit = null; // 回溯编辑状态
         
+        this.quickPromptContainer = document.querySelector('.quick-prompt-list');
+        this.quickPromptRefreshKey = null;
+        
         // DOM 元素
         this.chatMessages = document.getElementById('chatMessages');
         // 缓存欢迎卡片模板，供“Start New Chat”复用
@@ -94,6 +97,7 @@ class ChatApp {
             this.setupEventListeners();
             // 先加载Model并设置本地选择（确保首连就携带 model）
             await this.modelManager.loadModelsAndRenderDropdown(this.modelDropdownBtn, this.modelDropdown, this.wsManager);
+            await this.loadQuickPrompts();
             this.setupWebSocket();
             await this.connectWebSocket();
         } catch (error) {
@@ -101,6 +105,68 @@ class ChatApp {
             this.hideLoading();
             // 配置加载失败时，错误已经在configManager中显示，这里不需要额外处理
         }
+    }
+    
+    async loadQuickPrompts(force = false) {
+        if (!this.quickPromptContainer) {
+            return;
+        }
+        try {
+            const data = await window.configManager.fetchPrompts({ limit: 4 });
+            if (!force && this.quickPromptRefreshKey && this.quickPromptRefreshKey === data.refresh_key) {
+                return;
+            }
+            this.quickPromptRefreshKey = data.refresh_key;
+            const prompts = Array.isArray(data.prompts) ? data.prompts : [];
+            this.renderQuickPrompts(prompts);
+        } catch (error) {
+            console.warn('加载示例问句失败:', error);
+        }
+    }
+    
+    renderQuickPrompts(prompts) {
+        if (!this.quickPromptContainer) {
+            return;
+        }
+        this.quickPromptContainer.innerHTML = '';
+        if (!Array.isArray(prompts) || prompts.length === 0) {
+            this.quickPromptContainer.innerHTML = '<div class="quick-prompt-empty">暂无示例问题，请稍后重试。</div>';
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        prompts.forEach((promptText) => {
+            const btn = document.createElement('button');
+            btn.className = 'quick-prompt-btn';
+            btn.dataset.prompt = promptText;
+            btn.textContent = promptText;
+            btn.title = promptText;
+            fragment.appendChild(btn);
+        });
+        this.quickPromptContainer.appendChild(fragment);
+        this.bindQuickPromptEvents();
+    }
+    
+    bindQuickPromptEvents() {
+        if (!this.quickPromptContainer) {
+            return;
+        }
+        this.quickPromptContainer.onclick = (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+            const promptText = target.dataset && target.dataset.prompt;
+            if (!promptText) {
+                return;
+            }
+            if (!this.wsManager || !this.wsManager.isConnected()) {
+                this.showError('请先连接服务器后再使用示例问题。');
+                return;
+            }
+            this.uiController.insertTextAtCursor(this.messageInput, promptText);
+            this.updateSendButton();
+            this.smartScrollToBottom(true);
+        };
     }
 
     enterReadonlyMode() {
