@@ -3,3 +3,11 @@ clash/clash
 clash/config/decoded_nodes.txt
 clash/config/subscription.txt
 clash/config/config.yaml
+start_proxy.sh
+.gitignore
+.gitignore
+clash/config/geoip.metadb
+clash/config/providers/my-provider.yaml
+.gitignore
+clash/config/cache.db
+clash/config/Country.mmdb
