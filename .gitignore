@@ -1,0 +1,5 @@
+config/config.yaml
+clash/clash
+clash/config/decoded_nodes.txt
+clash/config/subscription.txt
+clash/config/config.yaml
