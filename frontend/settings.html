@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置 - 智能金融数据分析助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+    /* Settings page override: enable page scrolling */
+    body { height: auto; min-height: 100vh; overflow: auto; }
+    .app-container { height: auto; min-height: 100vh; overflow: visible; }
+    main.chat-container { overflow: visible; }
+    </style>
+</head>
+<body>
+    <div class="app-container" style="max-width:640px;margin:40px auto;">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">⚙️ 用户设置</h1>
+                <div class="header-actions">
+                    <a href="index.html" class="btn btn-secondary">返回主页</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="chat-container" style="padding: 1rem;">
+            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:16px;">
+                <h2 style="margin:0 0 10px 0;">修改用户名</h2>
+                <div style="margin-bottom:10px;">
+                    <label for="currentUsername">当前用户名</label>
+                    <input id="currentUsername" type="text" disabled style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label for="newUsername">新用户名</label>
+                    <input id="newUsername" type="text" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入新用户名">
+                </div>
+                <button id="btnUpdateName" class="btn btn-primary">保存用户名</button>
+                <div id="nameStatus" style="margin-top:10px;color:#64748b;"></div>
+            </div>
+
+            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:16px;">
+                <h2 style="margin:0 0 10px 0;">修改邮箱</h2>
+                <div style="margin-bottom:10px;">
+                    <label for="newEmail">新邮箱</label>
+                    <input id="newEmail" type="email" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入新邮箱">
+                </div>
+                <div style="margin-bottom:10px;display:flex;gap:.5rem;align-items:center;">
+                    <input id="emailCode" type="text" style="flex:1;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="邮箱验证码" aria-label="邮箱验证码">
+                    <button id="btnSendEmailCode" class="btn btn-secondary" type="button">发送验证码</button>
+                </div>
+                <button id="btnUpdateEmail" class="btn btn-primary">保存邮箱</button>
+                <div id="emailStatus" style="margin-top:10px;color:#64748b;"></div>
+            </div>
+
+            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                <h2 style="margin:0 0 10px 0;">重置密码</h2>
+                <div style="margin-bottom:10px;">
+                    <label for="oldPassword">旧密码</label>
+                    <input id="oldPassword" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入旧密码">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label for="newPassword">新密码</label>
+                    <input id="newPassword" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入新密码">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label for="newPassword2">确认新密码</label>
+                    <input id="newPassword2" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="再次输入新密码">
+                </div>
+                <button id="btnChangePwd" class="btn btn-primary">更新密码</button>
+                <div id="pwdStatus" style="margin-top:10px;color:#64748b;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+    (function(){
+        const user = (window.Auth && Auth.getUsername && Auth.getUsername()) || '';
+        if (!user) {
+            alert('请先登录');
+            try { window.location.href = 'login.html'; } catch {}
+            return;
+        }
+        document.getElementById('currentUsername').value = user;
+
+        document.getElementById('btnUpdateName').addEventListener('click', async () => {
+            const s = document.getElementById('nameStatus');
+            s.style.color = '#64748b'; s.textContent = '保存中...';
+            try {
+                const newName = (document.getElementById('newUsername').value||'').trim();
+                if (!newName) throw new Error('请输入新用户名');
+                await Auth.updateProfile(user, newName);
+                // 更新本地缓存用户名
+                try { Auth.setToken(Auth.getToken(), newName); } catch {}
+                s.style.color = '#2f855a'; s.textContent = '已更新';
+                document.getElementById('currentUsername').value = newName;
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '保存失败：' + (e.message||e);
+            }
+        });
+
+        document.getElementById('btnChangePwd').addEventListener('click', async () => {
+            const s = document.getElementById('pwdStatus');
+            s.style.color = '#64748b'; s.textContent = '更新中...';
+            try {
+                const oldPwd = (document.getElementById('oldPassword').value||'').trim();
+                const newPwd = (document.getElementById('newPassword').value||'').trim();
+                const newPwd2 = (document.getElementById('newPassword2').value||'').trim();
+                if (!oldPwd || !newPwd) throw new Error('请输入完整信息');
+                if (newPwd !== newPwd2) throw new Error('两次输入的新密码不一致');
+                await Auth.changePassword(oldPwd, newPwd);
+                s.style.color = '#2f855a'; s.textContent = '密码已更新';
+                // 可选：强制重新登录
+                // try { Auth.clear(); window.location.href = 'login.html'; } catch {}
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '更新失败：' + (e.message||e);
+            }
+        });
+
+        document.getElementById('btnSendEmailCode').addEventListener('click', async () => {
+            const s = document.getElementById('emailStatus');
+            s.style.color = '#64748b'; s.textContent = '发送验证码中...';
+            try {
+                const newEmail = (document.getElementById('newEmail').value||'').trim();
+                if (!newEmail) throw new Error('请先填写新邮箱');
+                await Auth.sendCode(newEmail, 'update_email');
+                s.style.color = '#2f855a'; s.textContent = '验证码已发送（10分钟内有效）';
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '发送失败：' + (e.message||e);
+            }
+        });
+
+        document.getElementById('btnUpdateEmail').addEventListener('click', async () => {
+            const s = document.getElementById('emailStatus');
+            s.style.color = '#64748b'; s.textContent = '保存中...';
+            try {
+                const newEmail = (document.getElementById('newEmail').value||'').trim();
+                const code = (document.getElementById('emailCode').value||'').trim();
+                if (!newEmail) throw new Error('请输入新邮箱');
+                if (!code) throw new Error('请输入邮箱验证码');
+                await Auth.updateEmail(newEmail, code);
+                s.style.color = '#2f855a'; s.textContent = '邮箱已更新';
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '保存失败：' + (e.message||e);
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
+
+

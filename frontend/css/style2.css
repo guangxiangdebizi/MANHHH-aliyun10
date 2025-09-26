@@ -1,0 +1,35 @@
+/* style2.css - 专门用于about.html等需要滚动的页面 */
+
+/* 覆盖主样式，允许页面滚动 */
+body {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+}
+
+.app-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+}
+
+/* 确保主内容区域可以滚动 */
+main.chat-container {
+    overflow: visible;
+}
+
+/* 响应式设计优化 */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 0;
+        margin: 20px auto;
+    }
+    
+    .header {
+        padding: 1rem;
+    }
+    
+    .chat-container {
+        padding: 0.5rem;
+    }
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享对话 - 智能金融数据分析助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Include marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top navigation bar -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">🔗 分享对话</h1>
+                <div class="header-actions">
+                    <div class="share-info-badge">
+                        <span class="readonly-badge">只读</span>
+                    </div>
+                    <a href="index.html" class="btn btn-primary">新建对话</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <main class="main-content">
+            <!-- Loading status -->
+            <div id="loadingOverlay" class="loading-overlay">
+                <div>正在加载分享对话...</div>
+            </div>
+
+            <!-- Chat messages area -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be loaded dynamically via JavaScript -->
+            </div>
+
+            <!-- Share info bar -->
+            <div class="share-footer">
+                <div class="share-footer-content">
+                    <p>📢 此页面以只读模式显示分享的对话，您无法在此继续对话。</p>
+                    <p>想要开始新的咨询？ <a href="index.html">前往对话</a></p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Include config manager -->
+    <script src="js/config.js"></script>
+    <script src="js/chat/thinking-flow.js"></script>
+    <script src="js/share.js"></script>
+    <script>
+        // Initialize share app
+        document.addEventListener('DOMContentLoaded', () => {
+            window.shareApp = new ShareApp();
+        });
+    </script>
+
+    <style>
+        /* Share page specific styles */
+        .readonly-badge {
+            background: #ed8936;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .share-footer {
+            background: #f7fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 1rem;
+            margin-top: auto;
+        }
+        
+        .share-footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            color: #718096;
+        }
+        
+        .share-footer-content p {
+            margin: 0.5rem 0;
+        }
+        
+        .share-footer-content a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+        
+        .share-footer-content a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Ensure main container fills height */
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Fix header to top - use !important for priority */
+        .header {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            background: white !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+            padding: 1rem 2rem !important;
+            flex-shrink: 0 !important;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 80px; /* Leave space for fixed header */
+            margin-bottom: 100px; /* Leave space for fixed footer */
+            height: calc(100vh - 180px); /* Set fixed height */
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem;
+            height: 100%; /* Fill parent container */
+            -webkit-overflow-scrolling: touch; /* Mobile scroll optimization */
+        }
+        
+        /* Fix footer to bottom - use !important for priority */
+        .share-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            background: #f7fafc !important;
+            border-top: 1px solid #e2e8f0 !important;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+            padding: 1rem !important;
+            margin-top: auto !important;
+        }
+        
+        /* Error state styles */
+        .error-message {
+            text-align: center;
+            padding: 2rem;
+            color: #e53e3e;
+        }
+        
+        .error-message h2 {
+            margin-bottom: 1rem;
+        }
+        
+        .error-message p {
+            margin-bottom: 0.5rem;
+            color: #718096;
+        }
+        
+        /* Empty state styles */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+        }
+        
+        .empty-state h2 {
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+        
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</body>
+</html>

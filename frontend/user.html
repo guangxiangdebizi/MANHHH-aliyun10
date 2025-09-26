@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户中心 - 智能金融数据分析助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style2.css">
+</head>
+<body class="user-page">
+    <div class="app-container" style="max-width:960px;margin:40px auto;">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">👤 用户中心</h1>
+                <div class="header-actions">
+                    <a href="index.html" class="btn btn-secondary">返回聊天</a>
+                    <a href="settings.html" class="btn btn-secondary">设置</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="chat-container" style="padding: 1rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="card" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                    <h2 style="margin:0 0 10px 0;">账户概览</h2>
+                    <div id="profileBox" style="color:#4a5568;line-height:1.8;">
+                        加载中...
+                    </div>
+                </div>
+                <div class="card" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                    <h2 style="margin:0 0 10px 0;">快捷入口</h2>
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                        <a href="settings.html" class="btn btn-secondary">账户与安全</a>
+                        <a href="#userModelsSection" class="btn btn-secondary">我的自定义模型</a>
+                        <a href="#tushareSection" class="btn btn-secondary">我的 Tushare Token</a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="userModelsSection" class="card models-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-top:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px; margin-bottom:8px;">
+                    <h2 style="margin:0;">我的自定义模型</h2>
+                    <div>
+                        <button id="btnAddModel" class="btn" style="background:#2563eb;color:#fff;">新增模型</button>
+                    </div>
+                </div>
+                <div id="modelsList" style="overflow:auto;">
+                    <div style="color:#718096;">加载中...</div>
+                </div>
+                <div id="modelFormWrap" style="display:none;margin-top:12px;border-top:1px dashed #e2e8f0;padding-top:12px;">
+                    <h3 id="formTitle" style="margin:0 0 8px 0;">新增模型</h3>
+                    <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;">
+                        <label>显示名称<label style="color:#ef4444;">*</label>
+                            <input id="fm_label" class="input" placeholder="如：我的DeepSeek" />
+                        </label>
+                        <label>模型名<label style="color:#ef4444;">*</label>
+                            <input id="fm_model" class="input" placeholder="如：deepseek-chat / glm-4.5" />
+                        </label>
+                        <label>Base URL
+                            <input id="fm_base_url" class="input" placeholder="如：https://api.deepseek.com/v1（可留空）" />
+                        </label>
+                        <label>API Key<label style="color:#ef4444;">*</label>
+                            <input id="fm_api_key" class="input" placeholder="请输入API密钥" />
+                        </label>
+                        <label>Temperature
+                            <input id="fm_temperature" class="input" type="number" step="0.1" min="0" max="2" value="0.2" />
+                        </label>
+                        <label>Timeout (s)
+                            <input id="fm_timeout" class="input" type="number" step="1" min="1" value="60" />
+                        </label>
+                    </div>
+                    <label style="display:block;margin-top:10px;">系统提示词
+                        <textarea id="fm_system_prompt" class="input" style="height:100px;" placeholder="可选，支持时间占位符（见README）"></textarea>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                        <input id="fm_enabled" type="checkbox" checked /> 启用
+                    </label>
+                    <div style="margin-top:12px;display:flex;gap:8px;">
+                        <button id="btnSaveModel" class="btn" style="background:#10b981;color:#fff;">保存</button>
+                        <button id="btnCancelModel" class="btn btn-secondary">取消</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tushareSection" class="card" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-top:16px;">
+                <h2 style="margin:0 0 10px 0;">我的 Tushare Token</h2>
+                <div style="display:flex;gap:.5rem;align-items:center;">
+                    <input id="ut_input" type="password" class="input" placeholder="输入/更新你的 Tushare Token" style="flex:1;" />
+                    <button id="ut_save" class="btn" style="background:#10b981;color:#fff;">保存</button>
+                    <button id="ut_clear" class="btn btn-secondary">清除</button>
+                </div>
+                <div id="ut_status" style="margin-top:.5rem;color:#64748b;font-size:.9rem;">状态：加载中...</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/user-models.js"></script>
+    <script>
+    (function(){
+        const token = (window.Auth && Auth.getToken && Auth.getToken()) || '';
+        if (!token) { alert('请先登录'); try { window.location.href = 'login.html'; } catch{} return; }
+        const box = document.getElementById('profileBox');
+        async function loadCredits(){
+            try {
+                if (!window.configManager || !window.configManager.isLoaded) {
+                    await window.configManager.loadConfig();
+                }
+                const url = window.configManager.getFullApiUrl('/api/auth/credits');
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json().catch(()=>({}));
+                const credits = (data && data.credits) || 0;
+                const username = (window.Auth && Auth.getUsername && Auth.getUsername()) || '';
+                box.innerHTML = `用户名：<strong>${username}</strong><br>积分余额：<strong>${credits}</strong>`;
+            } catch(e) {
+                box.textContent = '加载失败：' + (e.message||e);
+            }
+        }
+        loadCredits();
+        // 加载用户自定义模型管理模块
+        try { window.UserModels && window.UserModels.init && window.UserModels.init(); } catch(e) { console.warn('UserModels init failed', e); }
+
+        // --- Tushare Token 区 ---
+        const utStatus = document.getElementById('ut_status');
+        async function refreshUTStatus(){
+            try{
+                if (!window.configManager || !window.configManager.isLoaded) {
+                    await window.configManager.loadConfig();
+                }
+                const url = window.configManager.getFullApiUrl('/api/user/tushare_token');
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json().catch(()=>({}));
+                if (res.ok && data && data.success){
+                    utStatus.textContent = '状态：' + (data.is_set ? '已设置' : '未设置');
+                } else {
+                    utStatus.textContent = '状态：查询失败';
+                }
+            }catch(e){ utStatus.textContent = '状态：查询失败'; }
+        }
+        refreshUTStatus();
+
+        async function saveUT(clear){
+            const input = document.getElementById('ut_input');
+            const val = (input.value||'').trim();
+            if (!clear && !val){ utStatus.style.color = '#e53e3e'; utStatus.textContent = '请输入有效的 Token'; return; }
+            try{
+                const url = window.configManager.getFullApiUrl('/api/user/tushare_token');
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(clear ? { clear: true } : { token: val })
+                });
+                const data = await res.json().catch(()=>({}));
+                if (!res.ok || !data.success) throw new Error(data.detail || '保存失败');
+                utStatus.style.color = '#2f855a';
+                utStatus.textContent = clear ? '已清除' : '保存成功';
+                input.value = '';
+                // 保存成功后，无需刷新全局配置；会话重连时将自动带入
+            }catch(e){ utStatus.style.color = '#e53e3e'; utStatus.textContent = '保存失败：' + (e.message||e); }
+            finally{ setTimeout(()=>{ utStatus.style.color = '#64748b'; refreshUTStatus(); }, 800); }
+        }
+        document.getElementById('ut_save').addEventListener('click', ()=>saveUT(false));
+        document.getElementById('ut_clear').addEventListener('click', ()=>saveUT(true));
+    })();
+    </script>
+</body>
+</html>
+
+
+

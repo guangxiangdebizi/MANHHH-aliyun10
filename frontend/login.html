@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 智能金融数据分析助手</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container" style="max-width:480px;margin:40px auto;">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">🔐 登录</h1>
+                <div class="header-actions">
+                    <a href="index.html" class="btn btn-secondary">返回主页</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="chat-container" style="padding: 1rem;">
+            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                <div style="margin-bottom:10px;">
+                    <label>用户名</label>
+                    <input id="loginUsername" type="text" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入用户名">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>密码</label>
+                    <input id="loginPassword" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入密码">
+                </div>
+                <div style="display:flex;gap:.5rem;align-items:center;">
+                    <button id="doLogin" class="btn btn-primary">登录</button>
+                    <a href="register.html" class="btn btn-link">去注册</a>
+                    <a href="forgot.html" class="btn btn-link">忘记密码？</a>
+                </div>
+                <div id="loginStatus" style="margin-top:10px;color:#64748b;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+    (function(){
+        const u = document.getElementById('loginUsername');
+        const p = document.getElementById('loginPassword');
+        const s = document.getElementById('loginStatus');
+        async function doLogin(){
+            s.style.color = '#64748b'; s.textContent = '登录中...';
+            try {
+                const name = (u.value||'').trim();
+                const pass = (p.value||'').trim();
+                if (!name || !pass) throw new Error('请输入用户名和密码');
+                const data = await Auth.login(name, pass);
+                s.style.color = '#2f855a'; s.textContent = '登录成功，正在跳转...';
+                setTimeout(()=>{ window.location.href = 'index.html'; }, 500);
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '登录失败：' + (e.message||e);
+            }
+        }
+        document.getElementById('doLogin').addEventListener('click', doLogin);
+    })();
+    </script>
+</body>
+<\html>
+
+

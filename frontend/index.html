@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能金融数据分析助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Include marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- Include html2canvas for screenshots -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <!-- Mermaid for rendering diagrams (flowchart/sequence/pie/etc.) -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <!-- Chart.js for bar charts, line charts, etc. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <!-- Chart.js Financial (Candlestick/ohlc) plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3"></script>
+    <!-- Timeseries date adapter for Chart.js (parse YYYY-MM-DD) -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    <!-- ECharts for richer chart support -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script>
+      // Initialize Mermaid; do not auto-run on page load, we control rendering per message
+      try { mermaid.initialize({ startOnLoad: false }); } catch (e) { console.warn('Mermaid init failed:', e); }
+    </script>
+</head>
+<body class="index-page">
+    <div class="app-container">
+        <!-- Left sidebar for history -->
+        <aside class="sidebar" id="historySidebar">
+            <div class="sidebar-header">
+                <span>对话记录</span>
+                <button id="toggleSidebarBtn" class="btn btn-secondary">隐藏</button>
+            </div>
+            <div class="sidebar-content" id="threadsList"></div>
+        </aside>
+
+        <!-- Top navigation bar -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-actions">
+                    <button id="openSidebarBtn" class="btn btn-secondary">历史记录</button>
+                    <div class="auth-group" id="authGroup">
+                        <a href="login.html" id="loginLink" class="btn btn-secondary">登录</a>
+                        <div id="userAvatar" class="user-avatar" style="display:none">
+                            <div class="avatar-circle" id="avatarCircle">👤</div>
+                            <div class="dropdown-menu" id="userMenu" style="display:none">
+                                <div class="dropdown-item" id="menuUserCenter">用户中心</div>
+                                <div class="dropdown-item" id="menuSettings">设置</div>
+                                <div class="dropdown-item" id="menuAbout">关于我们</div>
+                                <div class="dropdown-item" id="menuLogout">退出</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="model-switcher">
+                        <button id="modelDropdownBtn" class="btn btn-secondary">模型：默认 ▾</button>
+                        <div id="modelDropdown" class="dropdown-menu" style="display:none"></div>
+                    </div>
+                    <button id="startNewChatBtn" class="btn btn-secondary">新建对话</button>
+                    <button id="shareChatBtn" class="btn btn-secondary">分享对话</button>
+
+                    <div class="status-indicator">
+                        <span id="connectionStatus" class="status-dot offline"></span>
+                        <span id="connectionText">离线</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main chat area -->
+        <main class="chat-container">
+            <!-- Chat messages area -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div class="welcome-icon">💼</div>
+                    <h2>欢迎使用智能金融数据分析助手</h2>
+                    <p>我是您的专业金融数据分析助手，基于先进的AI技术打造。在您的私有安全环境中部署，确保数据安全无泄露风险。您可以选择不同的AI模型（如 LLaMA 或 DeepSeek），用自然语言查询金融数据库，即时获得数据洞察，无需编程技能。我的目标是让您的金融分析更快速、更精准、更专业。</p>
+                    <p>请输入您的金融问题或数据查询需求开始对话。</p>
+                </div>
+            </div>
+
+            <!-- Input area -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="请输入您的金融问题或数据查询..." 
+                        rows="1"
+                        maxlength="2000"
+                    ></textarea>
+                    <div id="attachmentChips" class="attach-chips"></div>
+                    <button id="uploadBtn" class="send-btn" title="上传文件">
+                        <span>📎</span>
+                    </button>
+                    <input id="fileInput" type="file" style="display:none" multiple>
+                    <button id="sendBtn" class="send-btn" disabled>
+                        <span class="send-icon">📤</span>
+                    </button>
+                </div>
+                <div class="input-hint">
+                    按 Enter 发送，Shift + Enter 换行 | <span id="charCount">0</span>/2000
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在连接服务器...</div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/auth.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/ws.js"></script>
+    <script src="js/chat/thinking-flow.js"></script>
+    <script src="js/chat/message-actions.js"></script>
+    <script src="js/chat/history.js"></script>
+    <script src="js/chat/share-module.js"></script>
+    <!-- New modular components -->
+    <script src="js/chat/markdown-renderer.js"></script>
+    <script src="js/chat/ui-controller.js"></script>
+    <script src="js/chat/file-upload-manager.js"></script>
+    <script src="js/chat/model-manager.js"></script>
+    <script src="js/chat/message-manager.js"></script>
+    <script src="js/chat.js"></script>
+    <script>
+    (function(){
+        function refreshAuthUI(){
+            const user = window.Auth && Auth.getUsername();
+            const token = window.Auth && Auth.getToken();
+            const loginLink = document.getElementById('loginLink');
+            const userAvatar = document.getElementById('userAvatar');
+            if (token) {
+                if (loginLink){ loginLink.style.display='none'; }
+                if (userAvatar){ userAvatar.style.display='inline-block'; }
+            } else {
+                if (loginLink){ loginLink.style.display='inline-block'; }
+                if (userAvatar){ userAvatar.style.display='none'; }
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            // 头像悬停菜单交互
+            try {
+                const avatar = document.getElementById('userAvatar');
+                const menu = document.getElementById('userMenu');
+                const goUser = document.getElementById('menuUserCenter');
+                const goSettings = document.getElementById('menuSettings');
+                const goAbout = document.getElementById('menuAbout');
+                const goLogout = document.getElementById('menuLogout');
+                let hideTimer = null;
+                const showMenu = () => {
+                    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+                    if (menu) menu.style.display = 'block';
+                };
+                const scheduleHide = () => {
+                    if (hideTimer) clearTimeout(hideTimer);
+                    hideTimer = setTimeout(()=>{ if (menu) menu.style.display = 'none'; }, 300);
+                };
+                if (avatar && menu){
+                    avatar.addEventListener('mouseenter', showMenu);
+                    avatar.addEventListener('mouseleave', scheduleHide);
+                    menu.addEventListener('mouseenter', showMenu);
+                    menu.addEventListener('mouseleave', scheduleHide);
+                }
+                if (goUser){ goUser.addEventListener('click', ()=>{ window.location.href = 'user.html'; }); }
+                if (goSettings){ goSettings.addEventListener('click', ()=>{ window.location.href = 'settings.html'; }); }
+                if (goAbout){ goAbout.addEventListener('click', ()=>{ window.location.href = 'about.html'; }); }
+                if (goLogout){ goLogout.addEventListener('click', ()=>{ try { Auth.clear(); } catch{}; refreshAuthUI(); try { location.reload(); } catch{}; }); }
+            } catch {}
+            refreshAuthUI();
+        });
+    })();
+    </script>
+</body>
+</html>

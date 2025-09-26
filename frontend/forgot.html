@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找回密码 - 智能金融数据分析助手</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container" style="max-width:480px;margin:40px auto;">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">🔑 找回密码</h1>
+                <div class="header-actions">
+                    <a href="login.html" class="btn btn-secondary">返回登录</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="chat-container" style="padding: 1rem;">
+            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                <div style="margin-bottom:10px;">
+                    <label>邮箱</label>
+                    <input id="fpEmail" type="email" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入注册邮箱">
+                </div>
+                <div style="margin-bottom:10px;display:flex;gap:.5rem;align-items:center;">
+                    <input id="fpCode" type="text" style="flex:1;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="邮箱验证码">
+                    <button id="btnSendCode" class="btn btn-secondary" type="button">发送验证码</button>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>新密码</label>
+                    <input id="fpPass1" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="至少8位">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>确认新密码</label>
+                    <input id="fpPass2" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="再次输入新密码">
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <button id="btnReset" class="btn btn-primary">重置密码</button>
+                    <a href="login.html" class="btn btn-link">返回登录</a>
+                </div>
+                <div id="fpStatus" style="margin-top:10px;color:#64748b;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+    (function(){
+        const emailEl = document.getElementById('fpEmail');
+        const codeEl = document.getElementById('fpCode');
+        const p1El = document.getElementById('fpPass1');
+        const p2El = document.getElementById('fpPass2');
+        const statusEl = document.getElementById('fpStatus');
+
+        async function sendCode(){
+            statusEl.style.color = '#64748b'; statusEl.textContent = '发送中...';
+            try {
+                const email = (emailEl.value||'').trim();
+                if (!email) throw new Error('请先填写邮箱');
+                await Auth.sendCode(email, 'reset_password');
+                statusEl.style.color = '#2f855a'; statusEl.textContent = '验证码已发送，请查收邮件（10分钟内有效）';
+            } catch(e) {
+                statusEl.style.color = '#e53e3e'; statusEl.textContent = '发送失败：' + (e.message||e);
+            }
+        }
+
+        async function doReset(){
+            statusEl.style.color = '#64748b'; statusEl.textContent = '提交中...';
+            try {
+                const email = (emailEl.value||'').trim();
+                const code = (codeEl.value||'').trim();
+                const p1 = (p1El.value||'').trim();
+                const p2 = (p2El.value||'').trim();
+                if (!email || !code || !p1 || !p2) throw new Error('请填写完整信息');
+                if (p1 !== p2) throw new Error('两次输入的密码不一致');
+                await Auth.resetPassword(email, code, p1, p2);
+                statusEl.style.color = '#2f855a'; statusEl.textContent = '重置成功，正在前往登录...';
+                setTimeout(()=>{ window.location.href = 'login.html'; }, 800);
+            } catch(e) {
+                statusEl.style.color = '#e53e3e'; statusEl.textContent = '重置失败：' + (e.message||e);
+            }
+        }
+
+        document.getElementById('btnSendCode').addEventListener('click', sendCode);
+        document.getElementById('btnReset').addEventListener('click', doReset);
+    })();
+    </script>
+</body>
+</html>
+
+
+
