@@ -1,0 +1,589 @@
+<NAME>
+智能自适应高胜率策略|Intelligent Adaptive High Win Rate Strategy
+</NAME>
+<DESCRIPTION>
+集成多重确认机制、智能过滤和黑天鹅保护的顶级量化策略
+</DESCRIPTION>
+<PARAM>
+["StrategyMode","策略模式","",1,{"required":true,"default":1,"type":"number","options":{"0":"保守模式","1":"平衡模式","2":"激进模式"}}]
+["BBPeriod","布林带周期","",20,{"required":true,"default":20,"type":"number"}]
+["BBStd","布林带标准差","",2,{"required":true,"default":2,"type":"number"}]
+["BBWidthFilter","布林带宽度过滤","",0.005,{"required":true,"default":0.005,"type":"number"}]
+["TradeAmount","交易数量","",0.1,{"required":true,"default":0.1,"type":"number"}]
+["RSIPeriod","RSI周期","",14,{"required":true,"default":14,"type":"number"}]
+["MACDFast","MACD快线","",12,{"required":true,"default":12,"type":"number"}]
+["MACDSlow","MACD慢线","",26,{"required":true,"default":26,"type":"number"}]
+["MACDSignal","MACD信号线","",9,{"required":true,"default":9,"type":"number"}]
+["ATRPeriod","ATR周期","",14,{"required":true,"default":14,"type":"number"}]
+["ATRMultiplier","ATR乘数","",2,{"required":true,"default":2,"type":"number"}]
+["VolumeFilter","成交量过滤倍数","",1.2,{"required":true,"default":1.2,"type":"number"}]
+["BlackSwanThreshold","黑天鹅阈值","",0.15,{"required":true,"default":0.15,"type":"number"}]
+["BlackSwanCooling","黑天鹅冷却","",7200,{"required":true,"default":7200,"type":"number"}]
+["TrendFollowMode","趋势跟随模式","",1,{"required":true,"default":1,"type":"number"}]
+["DivergenceDetection","背离检测","",1,{"required":true,"default":1,"type":"number"}]
+["LoopInterval","轮询周期(ms)","",1000,{"required":true,"default":1000,"type":"number"}]
+["$$$__cmd__$$$StrategyMode","切换策略模式","",2,{"required":true,"default":2,"type":"number"}]
+["$$$__cmd__$$$BlackSwan","调整黑天鹅阈值","",0.1,{"required":true,"default":0.1,"type":"number"}]
+</PARAM>
+<CODE>
+'''backtest
+start: 2024-07-30 00:00:00
+end: 2024-08-29 00:00:00
+period: 1h
+basePeriod: 1h
+exchanges: [{"eid":"Binance","currency":"BTC_USDT"}]
+'''
+
+import time
+import json
+import numpy as np
+
+def cancelAll():
+    ret = False
+    for e in exchanges:
+        while True:
+            n = 0
+            for order in _C(e.GetOrders):
+                ret = True
+                e.CancelOrder(order.Id)
+                n+=1
+            if n == 0:
+                break
+    return ret
+
+def calculate_bollinger_bands(prices, period, std_dev):
+    """计算布林带"""
+    if len(prices) < period:
+        return 0, 0, 0, 0
+    middle_band = np.mean(prices[-period:])
+    std = np.std(prices[-period:])
+    upper_band = middle_band + std_dev * std
+    lower_band = middle_band - std_dev * std
+    bandwidth = (upper_band - lower_band) / middle_band
+    return upper_band, middle_band, lower_band, bandwidth
+
+def calculate_rsi(prices, period):
+    """计算RSI指标"""
+    if len(prices) < period + 1:
+        return 50
+    deltas = np.diff(prices[-period-1:])
+    gains = np.where(deltas > 0, deltas, 0)
+    losses = np.where(deltas < 0, -deltas, 0)
+    
+    avg_gain = np.mean(gains)
+    avg_loss = np.mean(losses)
+    
+    if avg_loss == 0:
+        return 100
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+def calculate_macd(prices, fast_period, slow_period, signal_period):
+    """计算MACD指标"""
+    if len(prices) < slow_period:
+        return 0, 0, 0
+    
+    fast_ema = np.mean(prices[-fast_period:])
+    slow_ema = np.mean(prices[-slow_period:])
+    macd_line = fast_ema - slow_ema
+    
+    # 简化信号线计算
+    signal_line = np.mean(prices[-signal_period:])
+    histogram = macd_line - signal_line
+    
+    return macd_line, signal_line, histogram
+
+def calculate_atr(high_prices, low_prices, close_prices, period):
+    """计算ATR指标"""
+    if len(high_prices) < period + 1:
+        return 0
+    
+    tr_values = []
+    for i in range(1, len(high_prices)):
+        high = high_prices[i]
+        low = low_prices[i]
+        prev_close = close_prices[i-1]
+        
+        tr1 = high - low
+        tr2 = abs(high - prev_close)
+        tr3 = abs(low - prev_close)
+        tr = max(tr1, tr2, tr3)
+        tr_values.append(tr)
+    
+    return np.mean(tr_values[-period:])
+
+def calculate_volume_signal(current_volume, volume_history, multiplier):
+    """计算成交量信号"""
+    if len(volume_history) < 10:
+        return True
+    
+    avg_volume = np.mean(volume_history[-10:])
+    return current_volume > avg_volume * multiplier
+
+def detect_rsi_divergence(prices, rsi_values, lookback=10):
+    """检测RSI背离"""
+    if len(prices) < lookback * 2 or len(rsi_values) < lookback * 2:
+        return {"bullish": False, "bearish": False}
+    
+    # 寻找价格和RSI的极值点
+    price_highs = []
+    price_lows = []
+    rsi_highs = []
+    rsi_lows = []
+    
+    # 简化版背离检测
+    recent_prices = prices[-lookback:]
+    recent_rsi = rsi_values[-lookback:]
+    
+    current_price = prices[-1]
+    prev_price = prices[-2]
+    current_rsi = rsi_values[-1]
+    prev_rsi = rsi_values[-2]
+    
+    # 看涨背离：价格新低，RSI抬高
+    bullish_divergence = (current_price < min(recent_prices[:-1]) and 
+                         current_rsi > min(recent_rsi[:-1]) and
+                         current_rsi < 40)
+    
+    # 看跌背离：价格新高，RSI降低
+    bearish_divergence = (current_price > max(recent_prices[:-1]) and 
+                         current_rsi < max(recent_rsi[:-1]) and
+                         current_rsi > 60)
+    
+    return {"bullish": bullish_divergence, "bearish": bearish_divergence}
+
+def detect_market_trend(prices, period=50):
+    """检测市场趋势状态"""
+    if len(prices) < period:
+        return "unknown"
+    
+    short_ma = np.mean(prices[-10:])
+    long_ma = np.mean(prices[-period:])
+    ma_diff = (short_ma - long_ma) / long_ma
+    
+    if ma_diff > 0.02:
+        return "uptrend"
+    elif ma_diff < -0.02:
+        return "downtrend"
+    else:
+        return "ranging"
+
+class AdvancedRiskManager:
+    def __init__(self):
+        self.black_swan_detected = False
+        self.black_swan_start_time = 0
+        self.max_drawdown = 0
+        self.peak_equity = 0
+        self.volatility_regime = "normal"
+        
+    def check_black_swan(self, current_price, price_history, threshold):
+        """检测黑天鹅事件"""
+        if len(price_history) < 10:
+            return False
+        
+        # 检查价格剧烈波动
+        price_changes = np.diff(price_history[-10:]) / price_history[-11:-1]
+        max_change = np.max(np.abs(price_changes))
+        
+        if max_change > threshold:
+            self.black_swan_detected = True
+            self.black_swan_start_time = time.time()
+            self.volatility_regime = "extreme"
+            Log(f"🚨 黑天鹅事件检测! 最大波动: {_N(max_change*100,2)}%")
+            return True
+        
+        # 检查是否结束黑天鹅状态
+        if self.black_swan_detected and time.time() - self.black_swan_start_time > 7200:  # 2小时
+            self.black_swan_detected = False
+            self.volatility_regime = "normal"
+            Log("黑天鹅状态结束")
+        
+        return self.black_swan_detected
+    
+    def calculate_drawdown(self, current_equity):
+        """计算回撤"""
+        if current_equity > self.peak_equity:
+            self.peak_equity = current_equity
+        
+        if self.peak_equity == 0:
+            return 0
+        
+        drawdown = (self.peak_equity - current_equity) / self.peak_equity
+        self.max_drawdown = max(self.max_drawdown, drawdown)
+        return drawdown
+
+class SmartSignalGenerator:
+    def __init__(self):
+        self.price_highs = []
+        self.price_lows = []
+        self.rsi_highs = []
+        self.rsi_lows = []
+        
+    def generate_trading_signal(self, current_price, bb_upper, bb_middle, bb_lower, 
+                               bb_width, rsi, macd_line, macd_signal, macd_histogram,
+                               atr, volume_signal, market_trend, divergence, 
+                               black_swan_detected, strategy_mode):
+        """生成智能交易信号"""
+        
+        if black_swan_detected:
+            return "wait"  # 黑天鹅期间等待
+        
+        # 布林带宽度过滤
+        if bb_width < 0.003:  # 带宽过窄，市场波动太小
+            return "wait"
+        
+        # 多重确认信号
+        bullish_signals = 0
+        bearish_signals = 0
+        
+        # 多头信号确认
+        if current_price <= bb_lower:
+            bullish_signals += 1  # 布林带下轨
+            
+        if rsi < 35:
+            bullish_signals += 1  # RSI超卖
+            
+        if macd_histogram > 0 or (macd_line > macd_signal and macd_histogram > -0.001):
+            bullish_signals += 1  # MACD转强
+            
+        if volume_signal:
+            bullish_signals += 1  # 成交量确认
+            
+        if divergence.get("bullish", False):
+            bullish_signals += 2  # 看涨背离（权重更高）
+            
+        if market_trend == "uptrend" and strategy_mode >= 1:
+            bullish_signals += 1  # 顺势交易加成
+            
+        # 空头信号确认
+        if current_price >= bb_upper:
+            bearish_signals += 1
+            
+        if rsi > 65:
+            bearish_signals += 1
+            
+        if macd_histogram < 0 or (macd_line < macd_signal and macd_histogram < 0.001):
+            bearish_signals += 1
+            
+        if volume_signal:
+            bearish_signals += 1
+            
+        if divergence.get("bearish", False):
+            bearish_signals += 2
+            
+        if market_trend == "downtrend" and strategy_mode >= 1:
+            bearish_signals += 1
+        
+        # 趋势跟随模式过滤
+        if strategy_mode >= 1:
+            if market_trend == "uptrend" and bearish_signals > 0:
+                bearish_signals = 0  # 上涨趋势中忽略做空信号
+            elif market_trend == "downtrend" and bullish_signals > 0:
+                bullish_signals = 0  # 下跌趋势中忽略做多信号
+        
+        # 信号强度阈值（根据策略模式调整）
+        if strategy_mode == 0:  # 保守模式
+            threshold = 4
+        elif strategy_mode == 1:  # 平衡模式
+            threshold = 3
+        else:  # 激进模式
+            threshold = 2
+        
+        if bullish_signals >= threshold:
+            return "buy"
+        elif bearish_signals >= threshold:
+            return "sell"
+        else:
+            return "wait"
+
+class ATRStopManager:
+    def __init__(self):
+        self.initial_stop = 0
+        self.trailing_stop = 0
+        self.peak_price = 0
+        self.valley_price = 0
+        
+    def calculate_stop_levels(self, position, entry_price, current_price, atr, atr_multiplier):
+        """基于ATR计算止损水平"""
+        atr_stop_distance = atr * atr_multiplier
+        
+        if position == 1:  # 多头
+            # 初始止损
+            if self.initial_stop == 0:
+                self.initial_stop = entry_price - atr_stop_distance
+            
+            # 更新峰值和移动止损
+            if current_price > self.peak_price:
+                self.peak_price = current_price
+                self.trailing_stop = max(self.initial_stop, self.peak_price - atr_stop_distance)
+                
+            return self.trailing_stop
+            
+        elif position == -1:  # 空头
+            # 初始止损
+            if self.initial_stop == 0:
+                self.initial_stop = entry_price + atr_stop_distance
+            
+            # 更新谷值和移动止损
+            if current_price < self.valley_price or self.valley_price == 0:
+                self.valley_price = current_price
+                self.trailing_stop = min(self.initial_stop, self.valley_price + atr_stop_distance)
+                
+            return self.trailing_stop
+        
+        return 0
+    
+    def reset(self):
+        """重置止损水平"""
+        self.initial_stop = 0
+        self.trailing_stop = 0
+        self.peak_price = 0
+        self.valley_price = 0
+
+def main():
+    # 参数声明
+    global StrategyMode, BBPeriod, BBStd, BBWidthFilter, TradeAmount, RSIPeriod
+    global MACDFast, MACDSlow, MACDSignal, ATRPeriod, ATRMultiplier, VolumeFilter
+    global BlackSwanThreshold, BlackSwanCooling, TrendFollowMode, DivergenceDetection, LoopInterval
+    
+    SetErrorFilter("canceled|ready|timeout|流控")
+    
+    if len(exchanges) < 1:
+        raise Exception("需要至少配置一个交易所")
+    
+    LogReset()
+    LogProfitReset()
+    cancelAll()
+    
+    exchange = exchanges[0]
+    risk_manager = AdvancedRiskManager()
+    signal_generator = SmartSignalGenerator()
+    atr_stop_manager = ATRStopManager()
+    
+    account = _C(exchange.GetAccount)
+    initBalance = account.Balance
+    initStocks = account.Stocks
+    exchangeName = exchange.GetName()
+    
+    # 策略状态变量
+    position = 0
+    entry_price = 0
+    entry_time = 0
+    trade_count = 0
+    winning_trades = 0
+    price_history = []
+    high_history = []
+    low_history = []
+    close_history = []
+    volume_history = []
+    rsi_history = []
+    last_trade_time = 0
+    min_amount = 0.001
+    
+    strategy_modes = {0: "保守", 1: "平衡", 2: "激进"}
+    Log(f"🎯 智能高胜率策略启动 - 模式:{strategy_modes[StrategyMode]}, 交易所:{exchangeName}")
+
+    while True:
+        Sleep(LoopInterval)
+        
+        cmd = GetCommand()
+        if cmd:
+            Log("CMD", cmd)
+            arr = cmd.split(':')
+            if arr[0] == 'StrategyMode':
+                new_mode = int(arr[1])
+                if new_mode in strategy_modes:
+                    StrategyMode = new_mode
+                    Log(f"切换策略模式: {strategy_modes[StrategyMode]}")
+            elif arr[0] == 'BlackSwan':
+                BlackSwanThreshold = float(arr[1])
+                Log(f"调整黑天鹅阈值: {BlackSwanThreshold}")
+        
+        # 获取市场数据
+        ticker = exchange.GetTicker()
+        if not ticker:
+            continue
+            
+        current_price = ticker.Last
+        depth = exchange.GetDepth()
+        if not depth:
+            continue
+        
+        records = _C(exchange.GetRecords)
+        if not records or len(records) < 50:
+            continue
+        
+        # 获取最新K线数据
+        current_high = records[-1].High
+        current_low = records[-1].Low
+        current_close = records[-1].Close
+        current_volume = records[-1].Volume
+        
+        # 更新价格历史
+        if len(price_history) >= max(BBPeriod, 50) * 3:
+            price_history.pop(0)
+            high_history.pop(0)
+            low_history.pop(0)
+            close_history.pop(0)
+            volume_history.pop(0)
+            rsi_history.pop(0)
+            
+        price_history.append(current_price)
+        high_history.append(current_high)
+        low_history.append(current_low)
+        close_history.append(current_close)
+        volume_history.append(current_volume)
+        
+        if len(price_history) < max(BBPeriod, ATRPeriod, RSIPeriod):
+            continue
+            
+        # 计算技术指标
+        bb_upper, bb_middle, bb_lower, bb_width = calculate_bollinger_bands(price_history, BBPeriod, BBStd)
+        rsi = calculate_rsi(price_history, RSIPeriod)
+        rsi_history.append(rsi)
+        macd_line, macd_signal, macd_histogram = calculate_macd(price_history, MACDFast, MACDSlow, MACDSignal)
+        atr = calculate_atr(high_history, low_history, close_history, ATRPeriod)
+        volume_signal = calculate_volume_signal(current_volume, volume_history, VolumeFilter)
+        market_trend = detect_market_trend(price_history)
+        
+        # 检测背离
+        divergence = {"bullish": False, "bearish": False}
+        if DivergenceDetection:
+            divergence = detect_rsi_divergence(price_history, rsi_history)
+        
+        # 获取账户信息
+        account = _C(exchange.GetAccount)
+        current_equity = account.Balance + account.Stocks * current_price
+        
+        # 风险监控
+        drawdown = risk_manager.calculate_drawdown(current_equity)
+        black_swan_detected = risk_manager.check_black_swan(current_price, price_history, BlackSwanThreshold)
+        
+        # 生成交易信号
+        signal = signal_generator.generate_trading_signal(
+            current_price, bb_upper, bb_middle, bb_lower, bb_width,
+            rsi, macd_line, macd_signal, macd_histogram, atr,
+            volume_signal, market_trend, divergence, black_swan_detected,
+            StrategyMode
+        )
+        
+        # 更新ATR止损水平
+        if position != 0:
+            stop_price = atr_stop_manager.calculate_stop_levels(
+                position, entry_price, current_price, atr, ATRMultiplier
+            )
+        else:
+            stop_price = 0
+        
+        # 显示状态信息
+        position_status = "无仓位"
+        profit_loss = 0
+        signal_strength = "等待信号"
+        
+        if position != 0:
+            profit_loss = (current_price - entry_price) / entry_price * (1 if position == 1 else -1)
+            position_status = f"{'多' if position == 1 else '空'}单({_N(profit_loss*100,2)}%)"
+            signal_strength = f"止损:{_N(stop_price,1)}"
+        else:
+            if signal == "buy":
+                signal_strength = "📈 强烈做多信号"
+            elif signal == "sell":
+                signal_strength = "📉 强烈做空信号"
+            else:
+                signal_strength = "⏳ 等待确认"
+        
+        win_rate = _N(winning_trades / trade_count * 100, 1) if trade_count > 0 else 0
+        
+        status_info = {
+            'type': 'table',
+            'title': f'🎯 智能高胜率策略 - {strategy_modes[StrategyMode]}模式 - 胜率:{win_rate}%',
+            'cols': ['指标', '数值', '状态', '信号确认', '风险监控'],
+            'rows': [
+                ['价格', _N(current_price), position_status, 
+                 signal_strength, f'交易:{trade_count}'],
+                ['技术指标', f'RSI:{_N(rsi,1)} MACD:{_N(macd_histogram,4)}', 
+                 f'ATR止损:{_N(stop_price,1)}' if position !=0 else f'带宽:{_N(bb_width*100,3)}%',
+                 f'成交量:{"✅" if volume_signal else "❌"}', f'胜率:{win_rate}%'],
+                ['市场状态', market_trend, 
+                 f'背离:{"看涨" if divergence["bullish"] else "看跌" if divergence["bearish"] else "无"}',
+                 f'黑天鹅:{"🚨" if black_swan_detected else "✅"}', 
+                 f'回撤:{_N(drawdown*100,2)}%']
+            ]
+        }
+        LogStatus('`' + json.dumps(status_info) + '`')
+        
+        # 交易逻辑
+        trade_executed = False
+        
+        # ATR止损平仓条件
+        if position != 0 and stop_price != 0:
+            should_close = False
+            close_reason = ""
+            
+            if position == 1 and current_price <= stop_price:
+                should_close = True
+                close_reason = f"ATR止损 @{_N(stop_price,1)}"
+            elif position == -1 and current_price >= stop_price:
+                should_close = True
+                close_reason = f"ATR止损 @{_N(stop_price,1)}"
+            
+            # 黑天鹅强制平仓
+            if black_swan_detected and position != 0:
+                should_close = True
+                close_reason = "黑天鹅事件强制平仓"
+            
+            # 执行平仓
+            if should_close:
+                if position == 1:
+                    exchange.Sell(current_price - 1, TradeAmount)
+                else:
+                    exchange.Buy(current_price + 1, TradeAmount)
+                
+                # 统计胜率
+                if profit_loss > 0:
+                    winning_trades += 1
+                
+                Log(f"平仓 - {close_reason}, 盈亏:{_N(profit_loss*100,2)}%")
+                position = 0
+                atr_stop_manager.reset()
+                trade_count += 1
+                trade_executed = True
+        
+        # 开仓条件（无仓位且不在黑天鹅状态）
+        if position == 0 and not trade_executed and not black_swan_detected:
+            # 检查资金是否足够
+            can_buy = account.Balance >= current_price * TradeAmount
+            can_sell = account.Stocks >= TradeAmount
+            
+            # 执行信号
+            if signal == "buy" and can_buy:
+                if exchange.Buy(current_price + 1, TradeAmount):
+                    position = 1
+                    entry_price = current_price
+                    entry_time = time.time()
+                    last_trade_time = time.time()
+                    Log(f"⚡智能开多仓 - 价格:{_N(current_price)}, 模式:{strategy_modes[StrategyMode]}")
+                    
+            elif signal == "sell" and can_sell:
+                if exchange.Sell(current_price - 1, TradeAmount):
+                    position = -1
+                    entry_price = current_price
+                    entry_time = time.time()
+                    last_trade_time = time.time()
+                    Log(f"⚡智能开空仓 - 价格:{_N(current_price)}, 模式:{strategy_modes[StrategyMode]}")
+        
+        # 更新利润统计
+        current_profit = current_equity - initBalance
+        LogProfit(_N(current_profit, 3), 
+                 f"胜率:{win_rate}% 交易:{trade_count} 模式:{strategy_modes[StrategyMode]}")
+
+</CODE>
+<LANG>
+1
+</LANG>
+<TYPE>
+9</TYPE>
+<TIME>
+2025-10-19 04:04:50
+</TIME>
