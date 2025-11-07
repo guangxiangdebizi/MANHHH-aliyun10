@@ -3,7 +3,7 @@
 *.env.local
 *.env.production
 *.env.development
-
+venv/
 # 依赖目录
 node_modules/
 __pycache__/

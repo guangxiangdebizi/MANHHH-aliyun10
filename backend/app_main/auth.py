@@ -224,22 +224,65 @@ async def reset_password(payload: Dict[str, Any]):
 
 @auth_router.post("/login")
 async def login(payload: Dict[str, Any]):
-    """用户登录接口"""
+    """用户登录接口 - 支持用户名或邮箱+密码登录"""
     chat_db = get_chat_db()
         
     username = (payload or {}).get("username", "").strip()
     password = (payload or {}).get("password", "").strip()
     
     if not username or not password:
-        raise HTTPException(status_code=400, detail="用户名与密码不能为空")
+        raise HTTPException(status_code=400, detail="用户名/邮箱与密码不能为空")
     
-    user = await chat_db.get_user_by_username(username)
+    # 判断输入的是邮箱还是用户名
+    if "@" in username:
+        # 当作邮箱处理
+        user = await chat_db.get_user_by_email(username.lower())
+    else:
+        # 当作用户名处理
+        user = await chat_db.get_user_by_username(username)
+    
     if not user:
-        raise HTTPException(status_code=401, detail="用户名或密码错误")
+        raise HTTPException(status_code=401, detail="用户名/邮箱或密码错误")
     
     if not pwd_context.verify(password, user.get("password_hash") or ""):
-        raise HTTPException(status_code=401, detail="用户名或密码错误")
+        raise HTTPException(status_code=401, detail="用户名/邮箱或密码错误")
     
+    token = pyjwt.encode(
+        {"uid": user["id"], "usr": user["username"], "iat": int(datetime.now().timestamp())}, 
+        JWT_SECRET, 
+        algorithm=JWT_ALG
+    )
+    return {
+        "success": True, 
+        "token": token, 
+        "user": {"id": user["id"], "username": user["username"], "credits": user.get("credits")}
+    }
+
+@auth_router.post("/login_with_code")
+async def login_with_code(payload: Dict[str, Any]):
+    """邮箱验证码登录接口 - 无需密码"""
+    chat_db = get_chat_db()
+        
+    email = (payload or {}).get("email", "").strip().lower()
+    code = (payload or {}).get("code", "").strip()
+    
+    if not email or not code:
+        raise HTTPException(status_code=400, detail="邮箱和验证码不能为空")
+    
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="邮箱格式不正确")
+    
+    # 验证邮箱验证码
+    ok = await chat_db.verify_code(email=email, code=code, purpose="login")
+    if not ok:
+        raise HTTPException(status_code=400, detail="验证码无效或已过期")
+    
+    # 通过邮箱查找用户
+    user = await chat_db.get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="该邮箱未注册")
+    
+    # 生成登录token
     token = pyjwt.encode(
         {"uid": user["id"], "usr": user["username"], "iat": int(datetime.now().timestamp())}, 
         JWT_SECRET, 

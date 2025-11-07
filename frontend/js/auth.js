@@ -56,6 +56,17 @@
             if (token) this.setToken(token, username);
             return data;
         },
+        async loginWithCode(email, code) {
+            if (!window.configManager || !window.configManager.isLoaded) {
+                await window.configManager.loadConfig();
+            }
+            const url = window.configManager.getFullApiUrl('/api/auth/login_with_code');
+            const data = await postJson(url, { email, code });
+            const token = (data && data.token) || '';
+            const username = (data && data.user && data.user.username) || '';
+            if (token && username) this.setToken(token, username);
+            return data;
+        },
         async register(email, username, password, confirmPassword, code) {
             if (!window.configManager || !window.configManager.isLoaded) {
                 await window.configManager.loadConfig();

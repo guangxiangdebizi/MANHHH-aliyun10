@@ -1,13 +1,13 @@
 {
   "backend": {
-    "host": "localhost",
-    "port": 8090,
-    "protocol": "http",
-    "wsProtocol": "ws"
+    "host": "finvestai.top",
+    "port": 5232,
+    "protocol": "https",
+    "wsProtocol": "wss"
   },
   "api": {
-    "baseUrl": "http://localhost:8090",
-    "wsUrl": "ws://localhost:8090"
+    "baseUrl": "https://finvestai.top/api",
+    "wsUrl": "wss://finvestai.top"
   },
   "version": "1.0.0",
   "description": "MCP Web智能助手前端配置文件"

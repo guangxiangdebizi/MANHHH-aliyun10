@@ -131,14 +131,13 @@ class ConfigManager {
     
     getApiBaseUrl() {
         this._ensureConfigLoaded();
-        // 线上优先使用“当前页面域名 + 配置端口”，避免 host 配错
+        // 生产环境：通过nginx代理，使用当前页面的协议和域名（不带端口）
         if (!this.isLocalDeployment()) {
             const currentProto = window.location.protocol === 'https:' ? 'https' : 'http';
             const currentHost = window.location.hostname;
-            const { port } = this.config.backend;
-            return `${currentProto}://${currentHost}:${port}`;
+            return `${currentProto}://${currentHost}`;
         }
-        // 本地保留原规则
+        // 本地开发环境：使用配置文件中的完整地址
         if (this.config.api && this.config.api.baseUrl) {
             return this.config.api.baseUrl;
         }
@@ -192,12 +191,12 @@ class ConfigManager {
             return this.getFullWebSocketUrl(endpoint);
         }
         
-        // 如果是跨域部署，使用当前页面的host但配置的端口
+        // 生产环境：通过nginx代理，不暴露后端端口
+        // 使用当前页面的协议和域名（通过nginx的443/80端口）
         const currentProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const currentHost = window.location.hostname;
-        const configPort = this.config.backend.port;
         
-        return `${currentProtocol}://${currentHost}:${configPort}${endpoint}`;
+        return `${currentProtocol}://${currentHost}${endpoint}`;
     }
 
     async fetchPrompts(options = {}) {

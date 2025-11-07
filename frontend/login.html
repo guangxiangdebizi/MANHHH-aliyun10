@@ -19,19 +19,48 @@
 
         <main class="chat-container" style="padding: 1rem;">
             <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-                <div style="margin-bottom:10px;">
-                    <label>用户名</label>
-                    <input id="loginUsername" type="text" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入用户名">
+                <!-- 登录方式切换 -->
+                <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                    <button id="switchToPassword" class="btn-tab active" style="flex:1;padding:8px;border:none;background:transparent;cursor:pointer;font-weight:500;color:#3182ce;">密码登录</button>
+                    <button id="switchToCode" class="btn-tab" style="flex:1;padding:8px;border:none;background:transparent;cursor:pointer;color:#718096;">验证码登录</button>
                 </div>
-                <div style="margin-bottom:10px;">
-                    <label>密码</label>
-                    <input id="loginPassword" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入密码">
+                
+                <!-- 密码登录表单 -->
+                <div id="passwordForm">
+                    <div style="margin-bottom:10px;">
+                        <label>用户名/邮箱</label>
+                        <input id="loginUsername" type="text" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入用户名或邮箱">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label>密码</label>
+                        <input id="loginPassword" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入密码">
+                    </div>
+                    <div style="display:flex;gap:.5rem;align-items:center;">
+                        <button id="doLogin" class="btn btn-primary">登录</button>
+                        <a href="register.html" class="btn btn-link">去注册</a>
+                        <a href="forgot.html" class="btn btn-link">忘记密码？</a>
+                    </div>
                 </div>
-                <div style="display:flex;gap:.5rem;align-items:center;">
-                    <button id="doLogin" class="btn btn-primary">登录</button>
-                    <a href="register.html" class="btn btn-link">去注册</a>
-                    <a href="forgot.html" class="btn btn-link">忘记密码？</a>
+                
+                <!-- 验证码登录表单 -->
+                <div id="codeForm" style="display:none;">
+                    <div style="margin-bottom:10px;">
+                        <label>邮箱</label>
+                        <input id="loginEmail" type="email" style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入邮箱地址">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label>验证码</label>
+                        <div style="display:flex;gap:8px;">
+                            <input id="loginCode" type="text" style="flex:1;padding:8px;border:1px solid #cbd5e0;border-radius:6px;" placeholder="输入6位验证码">
+                            <button id="sendCodeBtn" class="btn btn-secondary" style="white-space:nowrap;">发送验证码</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:.5rem;align-items:center;">
+                        <button id="doLoginWithCode" class="btn btn-primary">登录</button>
+                        <a href="register.html" class="btn btn-link">去注册</a>
+                    </div>
                 </div>
+                
                 <div id="loginStatus" style="margin-top:10px;color:#64748b;"></div>
             </div>
         </main>
@@ -41,15 +70,43 @@
     <script src="js/auth.js"></script>
     <script>
     (function(){
+        const passwordForm = document.getElementById('passwordForm');
+        const codeForm = document.getElementById('codeForm');
+        const switchToPassword = document.getElementById('switchToPassword');
+        const switchToCode = document.getElementById('switchToCode');
+        const s = document.getElementById('loginStatus');
+        
+        // 切换到密码登录
+        switchToPassword.addEventListener('click', () => {
+            passwordForm.style.display = 'block';
+            codeForm.style.display = 'none';
+            switchToPassword.style.color = '#3182ce';
+            switchToPassword.style.fontWeight = '500';
+            switchToCode.style.color = '#718096';
+            switchToCode.style.fontWeight = 'normal';
+            s.textContent = '';
+        });
+        
+        // 切换到验证码登录
+        switchToCode.addEventListener('click', () => {
+            passwordForm.style.display = 'none';
+            codeForm.style.display = 'block';
+            switchToCode.style.color = '#3182ce';
+            switchToCode.style.fontWeight = '500';
+            switchToPassword.style.color = '#718096';
+            switchToPassword.style.fontWeight = 'normal';
+            s.textContent = '';
+        });
+        
+        // 密码登录
         const u = document.getElementById('loginUsername');
         const p = document.getElementById('loginPassword');
-        const s = document.getElementById('loginStatus');
         async function doLogin(){
             s.style.color = '#64748b'; s.textContent = '登录中...';
             try {
                 const name = (u.value||'').trim();
                 const pass = (p.value||'').trim();
-                if (!name || !pass) throw new Error('请输入用户名和密码');
+                if (!name || !pass) throw new Error('请输入用户名/邮箱和密码');
                 const data = await Auth.login(name, pass);
                 s.style.color = '#2f855a'; s.textContent = '登录成功，正在跳转...';
                 setTimeout(()=>{ window.location.href = 'index.html'; }, 500);
@@ -58,6 +115,55 @@
             }
         }
         document.getElementById('doLogin').addEventListener('click', doLogin);
+        
+        // 验证码登录
+        const email = document.getElementById('loginEmail');
+        const code = document.getElementById('loginCode');
+        const sendCodeBtn = document.getElementById('sendCodeBtn');
+        let countdown = 0;
+        
+        // 发送验证码
+        sendCodeBtn.addEventListener('click', async () => {
+            if (countdown > 0) return;
+            s.style.color = '#64748b'; s.textContent = '发送中...';
+            try {
+                const emailVal = (email.value||'').trim();
+                if (!emailVal) throw new Error('请输入邮箱');
+                if (!emailVal.includes('@')) throw new Error('邮箱格式不正确');
+                await Auth.sendCode(emailVal, 'login');
+                s.style.color = '#2f855a'; s.textContent = '验证码已发送，请查收邮件';
+                // 倒计时60秒
+                countdown = 60;
+                sendCodeBtn.disabled = true;
+                const timer = setInterval(() => {
+                    countdown--;
+                    sendCodeBtn.textContent = `${countdown}秒后重发`;
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        sendCodeBtn.textContent = '发送验证码';
+                        sendCodeBtn.disabled = false;
+                    }
+                }, 1000);
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '发送失败：' + (e.message||e);
+            }
+        });
+        
+        // 验证码登录
+        async function doLoginWithCode(){
+            s.style.color = '#64748b'; s.textContent = '登录中...';
+            try {
+                const emailVal = (email.value||'').trim();
+                const codeVal = (code.value||'').trim();
+                if (!emailVal || !codeVal) throw new Error('请输入邮箱和验证码');
+                const data = await Auth.loginWithCode(emailVal, codeVal);
+                s.style.color = '#2f855a'; s.textContent = '登录成功，正在跳转...';
+                setTimeout(()=>{ window.location.href = 'index.html'; }, 500);
+            } catch(e) {
+                s.style.color = '#e53e3e'; s.textContent = '登录失败：' + (e.message||e);
+            }
+        }
+        document.getElementById('doLoginWithCode').addEventListener('click', doLoginWithCode);
     })();
     </script>
 </body>
