@@ -2,7 +2,7 @@
     "servers": {
       "finance-mcp": {
         "transport": "streamable_http",
-        "url": "http://47.79.147.241:3100/mcp",
+        "url": "https://finvestai.top/mcp",
         "headers": {
           "X-Tushare-Token": "b12fed6f15ca085db7a579041b7a9a373575c7833e5f4943fa2b8cf6"
         }

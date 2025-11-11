@@ -56,7 +56,7 @@ class ChatApp {
     async init() {
         try {
             // 首先确保配置已加载
-            this.showLoading('正在加载系统配置...');
+            // this.showLoading('正在加载系统配置...'); // 已移除页面加载时的加载提示
             
             if (!window.configManager.isLoaded) {
                 await window.configManager.loadConfig();
@@ -581,7 +581,7 @@ class ChatApp {
     }
 
     async connectWebSocket() {
-        this.uiController.showLoading(this.loadingOverlay, '正在连接金融数据服务器...');
+        // this.uiController.showLoading(this.loadingOverlay, '正在连接金融数据服务器...'); // 已移除页面加载时的加载提示
         this.uiController.updateConnectionStatus(this.connectionStatus, this.connectionText, 'connecting');
         await this.wsManager.connect();
         // 加载左侧线程列表（如果URL中有msid）

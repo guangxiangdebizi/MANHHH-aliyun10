@@ -878,7 +878,7 @@ body {
     right: 0;
     bottom: 0;
     background: rgba(255, 255, 255, 0.9);
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;

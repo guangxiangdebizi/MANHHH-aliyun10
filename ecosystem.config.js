@@ -24,6 +24,20 @@ module.exports = {
       max_restarts: 10,
       min_uptime: '10s',
       watch: false
+    },
+    {
+      name: 'cxy-presentation',
+      script: 'server.js',
+      cwd: '/home/ec2-user/AIWebHere/cxy',
+      interpreter: 'node',
+      error_file: '/home/ec2-user/AIWebHere/logs/cxy-presentation-error.log',
+      out_file: '/home/ec2-user/AIWebHere/logs/cxy-presentation-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'production'
+      }
     }
   ]
 };
