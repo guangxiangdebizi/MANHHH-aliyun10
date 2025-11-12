@@ -26,39 +26,90 @@
 </head>
 <body class="index-page">
     <div class="app-container">
-        <!-- Left sidebar for history -->
+        <!-- Left sidebar - ChatGPT/Apple Style -->
         <aside class="sidebar" id="historySidebar">
+            <!-- 顶部：新建对话按钮 -->
             <div class="sidebar-header">
-                <span>对话记录</span>
-                <button id="toggleSidebarBtn" class="btn btn-secondary">隐藏</button>
+                <div class="sidebar-controls">
+                    <div class="sidebar-logo">💼 金融助手</div>
+                    <button id="sidebarToggleBtn" class="sidebar-toggle-btn" title="关闭侧边栏">
+                        <span style="font-size: 1.2rem;">☰</span>
+                    </button>
+                </div>
+                <button id="startNewChatBtn" class="new-chat-btn">
+                    <span class="icon">➕</span>
+                    <span>新建对话</span>
+                </button>
             </div>
-            <div class="sidebar-content" id="threadsList"></div>
-        </aside>
 
-        <!-- Top navigation bar -->
-        <header class="header">
-            <div class="header-content">
-                <div class="header-actions">
-                    <button id="openSidebarBtn" class="btn btn-secondary">历史记录</button>
-                    <div class="auth-group" id="authGroup">
-                        <a href="login.html" id="loginLink" class="btn btn-secondary">登录</a>
-                        <div id="userAvatar" class="user-avatar" style="display:none">
-                            <div class="avatar-circle" id="avatarCircle">👤</div>
-                            <div class="dropdown-menu" id="userMenu" style="display:none">
-                                <div class="dropdown-item" id="menuUserCenter">用户中心</div>
-                                <div class="dropdown-item" id="menuSettings">设置</div>
-                                <div class="dropdown-item" id="menuAbout">关于我们</div>
-                                <div class="dropdown-item" id="menuLogout">退出</div>
-                            </div>
+            <!-- 历史记录列表 -->
+            <div class="sidebar-section-title">历史对话</div>
+            <div class="sidebar-content" id="threadsList"></div>
+
+            <!-- 底部：个人中心 -->
+            <div class="sidebar-footer">
+                <!-- 未登录状态 -->
+                <a href="login.html" id="loginLink" class="user-profile" style="display:none">
+                    <div class="user-profile-avatar">👤</div>
+                    <div class="user-profile-info">
+                        <div class="user-profile-name">登录</div>
+                        <div class="user-profile-email">访问更多功能</div>
+                    </div>
+                </a>
+
+                <!-- 已登录状态 -->
+                <div id="userProfile" class="user-profile" style="display:none">
+                    <div class="user-profile-avatar" id="profileAvatar">👤</div>
+                    <div class="user-profile-info">
+                        <div class="user-profile-name" id="profileName">用户</div>
+                        <div class="user-profile-email" id="profileEmail">user@example.com</div>
+                    </div>
+                    <!-- 个人中心下拉菜单 -->
+                    <div class="user-profile-menu" id="userProfileMenu">
+                        <div class="user-profile-menu-item" id="menuUserCenter">
+                            <span>👤</span>
+                            <span>用户中心</span>
+                        </div>
+                        <div class="user-profile-menu-item" id="menuSettings">
+                            <span>⚙️</span>
+                            <span>设置</span>
+                        </div>
+                        <div class="user-profile-menu-item" id="menuAbout">
+                            <span>ℹ️</span>
+                            <span>关于我们</span>
+                        </div>
+                        <div class="user-profile-menu-item danger" id="menuLogout">
+                            <span>🚪</span>
+                            <span>退出登录</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Top navigation bar - Simplified -->
+        <header class="header">
+            <!-- 移动端菜单按钮 -->
+            <button id="mobileMenuBtn" class="mobile-menu-btn">
+                <span class="icon">☰</span>
+            </button>
+
+            <div class="header-content">
+                <!-- 左侧：模型选择 -->
+                <div class="header-left">
                     <div class="model-switcher">
                         <button id="modelDropdownBtn" class="btn btn-secondary">模型：默认 ▾</button>
                         <div id="modelDropdown" class="dropdown-menu" style="display:none"></div>
                     </div>
-                    <button id="startNewChatBtn" class="btn btn-secondary">新建对话</button>
-                    <button id="shareChatBtn" class="btn btn-secondary">分享对话</button>
+                </div>
 
+                <!-- 右侧：分享按钮和连接状态 -->
+                <div class="header-right">
+                    <button id="shareChatBtn" class="btn btn-secondary">
+                        <span>🔗</span>
+                        <span>分享对话</span>
+                    </button>
+                    
                     <div class="status-indicator">
                         <span id="connectionStatus" class="status-dot offline"></span>
                         <span id="connectionText">离线</span>
@@ -135,44 +186,123 @@
             const user = window.Auth && Auth.getUsername();
             const token = window.Auth && Auth.getToken();
             const loginLink = document.getElementById('loginLink');
-            const userAvatar = document.getElementById('userAvatar');
-            if (token) {
+            const userProfile = document.getElementById('userProfile');
+            const profileName = document.getElementById('profileName');
+            const profileEmail = document.getElementById('profileEmail');
+            
+            if (token && user) {
+                // 已登录：显示用户信息
                 if (loginLink){ loginLink.style.display='none'; }
-                if (userAvatar){ userAvatar.style.display='inline-block'; }
+                if (userProfile){ userProfile.style.display='flex'; }
+                if (profileName){ profileName.textContent = user; }
+                if (profileEmail){ profileEmail.textContent = user; } // 可以改为实际邮箱
             } else {
-                if (loginLink){ loginLink.style.display='inline-block'; }
-                if (userAvatar){ userAvatar.style.display='none'; }
+                // 未登录：显示登录链接
+                if (loginLink){ loginLink.style.display='flex'; }
+                if (userProfile){ userProfile.style.display='none'; }
             }
         }
+
         document.addEventListener('DOMContentLoaded', function(){
-            // 头像悬停菜单交互
+            // 用户信息菜单交互
             try {
-                const avatar = document.getElementById('userAvatar');
-                const menu = document.getElementById('userMenu');
+                const userProfile = document.getElementById('userProfile');
+                const menu = document.getElementById('userProfileMenu');
                 const goUser = document.getElementById('menuUserCenter');
                 const goSettings = document.getElementById('menuSettings');
                 const goAbout = document.getElementById('menuAbout');
                 const goLogout = document.getElementById('menuLogout');
-                let hideTimer = null;
-                const showMenu = () => {
-                    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-                    if (menu) menu.style.display = 'block';
-                };
-                const scheduleHide = () => {
-                    if (hideTimer) clearTimeout(hideTimer);
-                    hideTimer = setTimeout(()=>{ if (menu) menu.style.display = 'none'; }, 300);
-                };
-                if (avatar && menu){
-                    avatar.addEventListener('mouseenter', showMenu);
-                    avatar.addEventListener('mouseleave', scheduleHide);
-                    menu.addEventListener('mouseenter', showMenu);
-                    menu.addEventListener('mouseleave', scheduleHide);
+                
+                // 点击用户头像显示/隐藏菜单
+                if (userProfile && menu){
+                    userProfile.addEventListener('click', function(e){
+                        e.stopPropagation();
+                        menu.classList.toggle('show');
+                    });
+                    
+                    // 点击页面其他地方关闭菜单
+                    document.addEventListener('click', function(){
+                        menu.classList.remove('show');
+                    });
+                    
+                    menu.addEventListener('click', function(e){
+                        e.stopPropagation();
+                    });
                 }
+                
+                // 菜单项点击事件
                 if (goUser){ goUser.addEventListener('click', ()=>{ window.location.href = 'user.html'; }); }
                 if (goSettings){ goSettings.addEventListener('click', ()=>{ window.location.href = 'settings.html'; }); }
                 if (goAbout){ goAbout.addEventListener('click', ()=>{ window.location.href = 'about.html'; }); }
-                if (goLogout){ goLogout.addEventListener('click', ()=>{ try { Auth.clear(); } catch{}; refreshAuthUI(); try { location.reload(); } catch{}; }); }
-            } catch {}
+                if (goLogout){ 
+                    goLogout.addEventListener('click', ()=>{ 
+                        try { Auth.clear(); } catch{}; 
+                        refreshAuthUI(); 
+                        try { location.reload(); } catch{}; 
+                    }); 
+                }
+                
+                // 移动端菜单按钮
+                const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                const sidebar = document.getElementById('historySidebar');
+                const appContainer = document.querySelector('.app-container');
+                
+                if (mobileMenuBtn && sidebar){
+                    mobileMenuBtn.addEventListener('click', function(){
+                        sidebar.classList.toggle('open');
+                        appContainer.classList.toggle('sidebar-open');
+                    });
+                }
+                
+                // 点击侧边栏外部区域关闭侧边栏（移动端）
+                if (window.innerWidth <= 768) {
+                    document.addEventListener('click', function(e) {
+                        if (sidebar && sidebar.classList.contains('open')) {
+                            if (!sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+                                sidebar.classList.remove('open');
+                                appContainer.classList.remove('sidebar-open');
+                            }
+                        }
+                    });
+                }
+                
+                // 侧边栏关闭按钮
+                const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+                if (sidebarToggleBtn && sidebar){
+                    sidebarToggleBtn.addEventListener('click', function(){
+                        // 桌面端：切换侧边栏显示
+                        if (window.innerWidth > 768) {
+                            sidebar.style.transform = 'translateX(-100%)';
+                            appContainer.style.paddingLeft = '0';
+                            
+                            // 在header上添加一个显示侧边栏的按钮
+                            if (!document.getElementById('showSidebarBtn')) {
+                                const showBtn = document.createElement('button');
+                                showBtn.id = 'showSidebarBtn';
+                                showBtn.className = 'mobile-menu-btn';
+                                showBtn.style.display = 'flex';
+                                showBtn.innerHTML = '<span class="icon">☰</span>';
+                                showBtn.onclick = function() {
+                                    sidebar.style.transform = 'translateX(0)';
+                                    appContainer.style.paddingLeft = '280px';
+                                    showBtn.remove();
+                                };
+                                const header = document.querySelector('.header');
+                                if (header) {
+                                    header.insertBefore(showBtn, header.firstChild);
+                                }
+                            }
+                        } else {
+                            // 移动端：关闭侧边栏
+                            sidebar.classList.remove('open');
+                            appContainer.classList.remove('sidebar-open');
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error('UI initialization error:', e);
+            }
+            
             refreshAuthUI();
         });
     })();

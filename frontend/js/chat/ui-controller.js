@@ -172,6 +172,129 @@ class UIController {
         this.smartScrollToBottom(chatMessagesEl, true); // 错误消息强制滚动
     }
 
+    // 显示友好的登录引导信息
+    showLoginGuide(chatMessagesEl) {
+        if (!chatMessagesEl) return;
+        
+        const guideDiv = document.createElement('div');
+        guideDiv.className = 'message ai login-guide';
+        guideDiv.innerHTML = `
+            <div class="message-bubble" style="background: linear-gradient(135deg, rgba(66, 153, 225, 0.08) 0%, rgba(72, 187, 120, 0.08) 100%); 
+                                                 border: 1px solid rgba(66, 153, 225, 0.2); 
+                                                 color: #2d3748;
+                                                 padding: 1.5rem;
+                                                 border-radius: 12px;">
+                <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                    <div style="font-size: 2rem; flex-shrink: 0;">👋</div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 600; color: #2d3748;">
+                            欢迎使用智能助手
+                        </h3>
+                        <p style="margin: 0 0 1rem 0; color: #4a5568; line-height: 1.6;">
+                            为了提供更好的服务体验,请先登录您的账号。登录后您将享有:
+                        </p>
+                        <ul style="margin: 0 0 1rem 0; padding-left: 1.25rem; color: #4a5568; line-height: 1.8;">
+                            <li>对话历史自动保存</li>
+                            <li>个性化模型配置</li>
+                            <li>多端数据同步</li>
+                        </ul>
+                        <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+                            <a href="login.html" style="display: inline-block; 
+                                                        background: linear-gradient(135deg, #4299e1 0%, #48bb78 100%);
+                                                        color: white; 
+                                                        padding: 0.5rem 1.25rem; 
+                                                        border-radius: 8px; 
+                                                        text-decoration: none;
+                                                        font-weight: 500;
+                                                        transition: all 0.2s;
+                                                        box-shadow: 0 2px 4px rgba(66, 153, 225, 0.2);">
+                                立即登录 →
+                            </a>
+                            <a href="register.html" style="display: inline-block; 
+                                                           color: #4299e1; 
+                                                           padding: 0.5rem 1.25rem; 
+                                                           border-radius: 8px; 
+                                                           text-decoration: none;
+                                                           border: 1px solid #4299e1;
+                                                           font-weight: 500;
+                                                           transition: all 0.2s;">
+                                注册新账号
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        chatMessagesEl.appendChild(guideDiv);
+        this.smartScrollToBottom(chatMessagesEl, true);
+    }
+
+    // 显示轻量级提示Toast (用于非阻塞式提示)
+    showStatusToast(message, duration = 3000) {
+        // 创建toast容器
+        let toastContainer = document.getElementById('statusToastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'statusToastContainer';
+            toastContainer.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            `;
+            document.body.appendChild(toastContainer);
+        }
+
+        // 创建toast元素
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            background: rgba(45, 55, 72, 0.95);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 14px;
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        `;
+        toast.textContent = message;
+
+        // 添加动画样式
+        if (!document.getElementById('toastAnimationStyle')) {
+            const style = document.createElement('style');
+            style.id = 'toastAnimationStyle';
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        toastContainer.appendChild(toast);
+
+        // 自动移除
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                toast.remove();
+                // 如果容器为空则移除容器
+                if (toastContainer.children.length === 0) {
+                    toastContainer.remove();
+                }
+            }, 300);
+        }, duration);
+    }
+
     // 在输入框光标位置插入文本
     insertTextAtCursor(messageInput, text) {
         if (!messageInput) return;

@@ -81,14 +81,15 @@ class ChatApp {
                 }
             } catch {}
             
-            // 若未登录，则不建立连接，提示用户并隐藏遮罩
+            // 若未登录，则不建立连接，显示友好的登录引导
             try {
                 const token = (window.Auth && Auth.getToken && Auth.getToken()) || '';
                 if (!token) {
                     this.setupEventListeners();
                     this.updateConnectionStatus('offline');
                     this.hideLoading();
-                    this.showError('请先登录后再开始对话。');
+                    // 使用友好的登录引导替代红色错误提示
+                    this.uiController.showLoginGuide(this.chatMessages);
                     return;
                 }
             } catch {}
@@ -781,6 +782,23 @@ class ChatApp {
                 
             case 'tool_error':
                 this.thinkingFlow.updateToolInThinking(data, 'error');
+                break;
+                
+            case 'fallback_triggered':
+                // 工具调用失败兜底机制触发
+                try {
+                    console.log('🛟 触发兜底机制:', data);
+                    // 显示友好提示
+                    this.uiController.showStatusToast('工具调用遇到问题，正在为您生成替代方案...', 4000);
+                    // 在思维流中显示兜底提示
+                    this.thinkingFlow.updateThinkingStage(
+                        'fallback', 
+                        'Tool execution fallback', 
+                        `遇到${data.error_count || 0}次工具调用失败，正在生成替代回复...`
+                    );
+                } catch (e) {
+                    console.warn('处理 fallback_triggered 失败', e);
+                }
                 break;
                 
             case 'ai_response_start':

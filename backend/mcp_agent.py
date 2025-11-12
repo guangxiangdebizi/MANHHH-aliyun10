@@ -501,6 +501,10 @@ class WebMCPAgent:
             round_index = 0
             # 合并两阶段输出为同一条消息：在整个会话回答期间仅发送一次 start，最后一次性 end
             combined_response_started = False
+            # 工具调用失败计数器和兜底机制
+            consecutive_tool_failures = 0
+            max_consecutive_failures = 3  # 连续失败3次触发兜底
+            tool_error_history = []  # 记录错误历史
             while round_index < max_rounds:
                 round_index += 1
                 print(f"🧠 第 {round_index} 轮推理 (双实例：判定工具 + 纯流式回答)...")
@@ -668,6 +672,7 @@ class WebMCPAgent:
 
                     # 执行工具（非流式）
                     exit_to_stream = False
+                    current_round_has_error = False
                     for i, tool_call in enumerate(tool_calls_to_run, 1):
                         if isinstance(tool_call, dict):
                             tool_id = tool_call.get('id') or f"call_{i}"
@@ -692,6 +697,7 @@ class WebMCPAgent:
 
                         yield {"type": "tool_start", "tool_id": tool_id, "tool_name": tool_name, "tool_args": parsed_args, "progress": f"{i}/{len(tool_calls_to_run)}"}
 
+                        tool_execution_failed = False
                         try:
                             target_tool = None
                             for tool in self.tools:
@@ -703,6 +709,9 @@ class WebMCPAgent:
                                 print(f"❌ {error_msg}")
                                 yield {"type": "tool_error", "tool_id": tool_id, "error": error_msg}
                                 tool_result = f"错误: {error_msg}"
+                                tool_execution_failed = True
+                                current_round_has_error = True
+                                tool_error_history.append({"tool": tool_name, "error": error_msg})
                             else:
                                 # 抑制MCP客户端在工具调用时的SSE解析错误日志
                                 import logging
@@ -713,6 +722,8 @@ class WebMCPAgent:
                                 try:
                                     tool_result = await target_tool.ainvoke(parsed_args)
                                     yield {"type": "tool_end", "tool_id": tool_id, "tool_name": tool_name, "result": str(tool_result)}
+                                    # 工具执行成功，重置失败计数器
+                                    consecutive_tool_failures = 0
                                     # 不再支持退出工具模式
                                 finally:
                                     mcp_logger.setLevel(original_level)
@@ -721,6 +732,9 @@ class WebMCPAgent:
                             print(f"❌ {error_msg}")
                             yield {"type": "tool_error", "tool_id": tool_id, "error": error_msg}
                             tool_result = f"错误: {error_msg}"
+                            tool_execution_failed = True
+                            current_round_has_error = True
+                            tool_error_history.append({"tool": tool_name, "error": str(e)})
 
                         # 始终追加 tool 消息，满足 OpenAI 函数调用协议要求
                         # 对于退出工具模式，内容为简单状态，不影响后续回答质量
@@ -733,6 +747,51 @@ class WebMCPAgent:
 
                         if exit_to_stream:
                             break
+
+                    # 更新连续失败计数器
+                    if current_round_has_error:
+                        consecutive_tool_failures += 1
+                        print(f"⚠️ 工具调用失败计数: {consecutive_tool_failures}/{max_consecutive_failures}")
+                        
+                        # 达到阈值,触发兜底响应
+                        if consecutive_tool_failures >= max_consecutive_failures:
+                            print(f"🛟 触发兜底机制: 连续{consecutive_tool_failures}次工具调用失败")
+                            
+                            # 构建错误摘要
+                            error_summary = "\n".join([
+                                f"- {err.get('tool', '未知工具')}: {err.get('error', '未知错误')}"
+                                for err in tool_error_history[-3:]  # 只显示最近3个错误
+                            ])
+                            
+                            # 生成兜底回复提示词
+                            fallback_prompt = f"""工具调用出现异常,请根据当前已有信息给用户一个合理的回复。
+
+错误情况:
+{error_summary}
+
+请告知用户:
+1. 系统暂时无法获取所需数据
+2. 根据对话历史,给出基于已知信息的建议或替代方案
+3. 语气友好专业,不要过分道歉"""
+
+                            # 将兜底提示加入历史
+                            shared_history.append({
+                                "role": "user",
+                                "content": fallback_prompt
+                            })
+                            
+                            # 通知前端触发兜底机制
+                            yield {
+                                "type": "fallback_triggered",
+                                "content": f"工具调用异常,正在生成替代回复...",
+                                "error_count": consecutive_tool_failures
+                            }
+                            
+                            # 强制进入下一轮,让模型基于兜底提示生成回复
+                            # 重置计数器,避免再次触发
+                            consecutive_tool_failures = 0
+                            tool_error_history = []
+                            continue
 
                     if exit_to_stream:
                         # 不再支持提前强制切流式，按原逻辑继续下一轮
