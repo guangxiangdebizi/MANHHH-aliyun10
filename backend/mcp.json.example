@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "finance-mcp": {
+      "transport": "streamable_http",
+      "url": "https://your-mcp-server.com/mcp",
+      "headers": {
+        "X-Tushare-Token": "your_tushare_token_here"
+      }
+    }
+  }
+}
+

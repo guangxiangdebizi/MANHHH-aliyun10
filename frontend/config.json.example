@@ -1,14 +1,15 @@
 {
   "backend": {
-    "host": "finvestai.top",
+    "host": "your-domain.com",
     "port": 5232,
     "protocol": "https",
     "wsProtocol": "wss"
   },
   "api": {
-    "baseUrl": "https://finvestai.top/api",
-    "wsUrl": "wss://finvestai.top"
+    "baseUrl": "https://your-domain.com/api",
+    "wsUrl": "wss://your-domain.com"
   },
   "version": "1.0.0",
   "description": "MCP Web智能助手前端配置文件"
-} 
+}
+
