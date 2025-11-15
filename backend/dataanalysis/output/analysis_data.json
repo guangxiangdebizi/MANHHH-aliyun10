@@ -3,20 +3,20 @@
     "total_users": 414,
     "users_with_email": 414,
     "users_with_tushare": 10,
-    "users_tushare_enabled": 1,
-    "credits_avg": 48.15,
+    "users_tushare_enabled": 0,
+    "credits_avg": 48.14,
     "credits_min": 0,
-    "credits_max": 975,
+    "credits_max": 971,
     "new_users_7days": 1,
     "new_users_30days": 79
   },
   "chat_stats": {
-    "total_sessions": 1343,
-    "total_conversations": 1747,
-    "total_messages": 2341,
-    "messages_7days": 39,
-    "messages_30days": 374,
-    "avg_messages_per_user": 4.75,
+    "total_sessions": 1346,
+    "total_conversations": 1750,
+    "total_messages": 2344,
+    "messages_7days": 42,
+    "messages_30days": 377,
+    "avg_messages_per_user": 4.76,
     "top_users": [
       {
         "username": "gg",
@@ -31,15 +31,15 @@
         "message_count": 29
       },
       {
+        "username": "manhahaha",
+        "message_count": 28
+      },
+      {
         "username": "ugd26mf1g6",
         "message_count": 28
       },
       {
         "username": "kkcldc",
-        "message_count": 25
-      },
-      {
-        "username": "manhahaha",
         "message_count": 25
       },
       {
@@ -61,7 +61,7 @@
     ]
   },
   "tool_stats": {
-    "unknown": 11907
+    "unknown": 11918
   },
-  "generated_at": "2025-11-15T06:45:27.778488"
+  "generated_at": "2025-11-15T06:55:50.243170"
 }

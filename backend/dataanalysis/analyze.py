@@ -17,9 +17,9 @@ from wordcloud import WordCloud
 import pandas as pd
 import numpy as np
 
-# 设置中文字体
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
-matplotlib.rcParams['axes.unicode_minus'] = False
+# 设置中文字体 - 稍后在下载字体后再配置
+# matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
+# matplotlib.rcParams['axes.unicode_minus'] = False
 
 # 项目路径
 BASE_DIR = Path(__file__).parent.parent
@@ -31,9 +31,14 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 FONT_PATH = Path(__file__).parent / "SimHei.ttf"
 
 def download_chinese_font():
-    """下载中文字体用于词云"""
+    """下载中文字体用于词云和图表"""
     if FONT_PATH.exists():
         print(f"✓ 中文字体已存在: {FONT_PATH}")
+        # 配置 matplotlib 使用下载的字体
+        from matplotlib import font_manager
+        font_manager.fontManager.addfont(str(FONT_PATH))
+        matplotlib.rcParams['font.sans-serif'] = ['Source Han Sans SC', 'SimHei', 'DejaVu Sans']
+        matplotlib.rcParams['axes.unicode_minus'] = False
         return str(FONT_PATH)
     
     print("⬇️ 下载中文字体...")
@@ -45,6 +50,11 @@ def download_chinese_font():
     try:
         urllib.request.urlretrieve(font_url, FONT_PATH)
         print(f"✓ 字体下载成功: {FONT_PATH}")
+        # 配置 matplotlib 使用下载的字体
+        from matplotlib import font_manager
+        font_manager.fontManager.addfont(str(FONT_PATH))
+        matplotlib.rcParams['font.sans-serif'] = ['Source Han Sans SC', 'SimHei', 'DejaVu Sans']
+        matplotlib.rcParams['axes.unicode_minus'] = False
         return str(FONT_PATH)
     except Exception as e:
         print(f"⚠️ 字体下载失败: {e}")
@@ -58,9 +68,15 @@ def download_chinese_font():
         for font in system_fonts:
             if os.path.exists(font):
                 print(f"✓ 使用系统字体: {font}")
+                # 配置 matplotlib 使用系统字体
+                from matplotlib import font_manager
+                font_manager.fontManager.addfont(font)
+                matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'DejaVu Sans']
+                matplotlib.rcParams['axes.unicode_minus'] = False
                 return font
         
         print("⚠️ 未找到中文字体，词云可能无法正常显示中文")
+        matplotlib.rcParams['axes.unicode_minus'] = False
         return None
 
 
@@ -456,6 +472,10 @@ def main():
     print(f"📁 输出目录: {OUTPUT_DIR}")
     print("")
     
+    # 首先下载并配置中文字体
+    print("🔤 配置中文字体...")
+    download_chinese_font()
+    
     # 连接数据库
     conn = connect_db()
     
@@ -477,7 +497,7 @@ def main():
         questions = get_user_questions(conn)
         all_questions_text = '\n'.join(questions)
         
-        # 5. 生成词云
+        # 5. 生成词云（确保字体已配置）
         print("☁️ 生成词云...")
         generate_wordcloud(
             all_questions_text,
