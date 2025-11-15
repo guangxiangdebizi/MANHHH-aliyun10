@@ -60,6 +60,11 @@ class ChatDatabase:
                     await db.execute("ALTER TABLE users ADD COLUMN tushare_token TEXT")
                 except Exception:
                     pass
+                # 兼容旧库：尝试补充 users.tushare_token_enabled 列（默认关闭）
+                try:
+                    await db.execute("ALTER TABLE users ADD COLUMN tushare_token_enabled INTEGER DEFAULT 0")
+                except Exception:
+                    pass
                 # 为 email 创建唯一索引（允许多个 NULL，但非 NULL 唯一）
                 try:
                     await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email)")
@@ -203,7 +208,7 @@ class ChatDatabase:
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
-                    "SELECT id, username, email, password_hash, credits, created_at, tushare_token FROM users WHERE username = ?",
+                    "SELECT id, username, email, password_hash, credits, created_at, tushare_token, tushare_token_enabled FROM users WHERE username = ?",
                     (username,)
                 )
                 row = await cursor.fetchone()
@@ -217,6 +222,7 @@ class ChatDatabase:
                     "credits": row[4],
                     "created_at": row[5],
                     "tushare_token": row[6] if len(row) > 6 else None,
+                    "tushare_token_enabled": bool(row[7]) if len(row) > 7 else False,
                 }
         except Exception as e:
             print(f"❌ 查询用户失败: {e}")
@@ -226,7 +232,7 @@ class ChatDatabase:
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
-                    "SELECT id, username, email, password_hash, credits, created_at, tushare_token FROM users WHERE email = ?",
+                    "SELECT id, username, email, password_hash, credits, created_at, tushare_token, tushare_token_enabled FROM users WHERE email = ?",
                     (email,)
                 )
                 row = await cursor.fetchone()
@@ -240,6 +246,7 @@ class ChatDatabase:
                     "credits": row[4],
                     "created_at": row[5],
                     "tushare_token": row[6] if len(row) > 6 else None,
+                    "tushare_token_enabled": bool(row[7]) if len(row) > 7 else False,
                 }
         except Exception as e:
             print(f"❌ 通过邮箱查询用户失败: {e}")
@@ -298,32 +305,60 @@ class ChatDatabase:
             print(f"❌ 增加积分失败: {e}")
             return False
 
-    async def set_user_tushare_token(self, user_id: int, token: Optional[str]) -> bool:
-        """设置或清空用户的 Tushare Token。传入空字符串或 None 将清空。"""
+    async def set_user_tushare_token(self, user_id: int, token: Optional[str], enabled: Optional[bool] = None, only_update_enabled: bool = False) -> bool:
+        """设置或清空用户的 Tushare Token，并可选设置启用状态。
+        
+        Args:
+            user_id: 用户ID
+            token: Token值，传入空字符串或 None 将清空
+            enabled: 是否启用，None 表示不修改当前状态
+            only_update_enabled: 仅更新启用状态，不修改token（当用户只想切换开关时）
+        """
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                await db.execute(
-                    "UPDATE users SET tushare_token = ? WHERE id = ?",
-                    ((token or None), user_id)
-                )
+                if only_update_enabled and enabled is not None:
+                    # 仅更新启用状态，不改变 token
+                    await db.execute(
+                        "UPDATE users SET tushare_token_enabled = ? WHERE id = ?",
+                        (1 if enabled else 0, user_id)
+                    )
+                elif enabled is not None:
+                    # 同时更新 token 和启用状态
+                    await db.execute(
+                        "UPDATE users SET tushare_token = ?, tushare_token_enabled = ? WHERE id = ?",
+                        ((token or None), 1 if enabled else 0, user_id)
+                    )
+                else:
+                    # 只更新 token，不改变启用状态
+                    await db.execute(
+                        "UPDATE users SET tushare_token = ? WHERE id = ?",
+                        ((token or None), user_id)
+                    )
                 await db.commit()
                 return True
         except Exception as e:
             print(f"❌ 设置用户 Tushare Token 失败: {e}")
             return False
 
-    async def get_user_tushare_token_by_id(self, user_id: int) -> Optional[str]:
-        """按用户ID获取 Tushare Token。"""
+    async def get_user_tushare_token_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """按用户ID获取 Tushare Token 和启用状态。
+        
+        Returns:
+            包含 token 和 enabled 的字典，或 None
+        """
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
-                    "SELECT tushare_token FROM users WHERE id = ?",
+                    "SELECT tushare_token, tushare_token_enabled FROM users WHERE id = ?",
                     (user_id,)
                 )
                 row = await cursor.fetchone()
                 if not row:
                     return None
-                return row[0]
+                return {
+                    "token": row[0],
+                    "enabled": bool(row[1]) if len(row) > 1 else False
+                }
         except Exception as e:
             print(f"❌ 查询用户 Tushare Token 失败: {e}")
             return None

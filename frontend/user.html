@@ -89,6 +89,13 @@
                     <button id="ut_save" class="btn" style="background:#10b981;color:#fff;">保存</button>
                     <button id="ut_clear" class="btn btn-secondary">清除</button>
                 </div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:8px;padding:10px;background:#f8fafc;border-radius:6px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
+                        <input id="ut_enabled" type="checkbox" style="width:18px;height:18px;cursor:pointer;" />
+                        <span style="font-weight:500;color:#334155;">启用我的 API Key</span>
+                    </label>
+                    <span style="color:#64748b;font-size:.85rem;">（勾选后使用你自己的 Token，取消勾选则使用系统默认 Token）</span>
+                </div>
                 <div id="ut_status" style="margin-top:.5rem;color:#64748b;font-size:.9rem;">状态：加载中...</div>
             </div>
         </main>
@@ -123,6 +130,8 @@
 
         // --- Tushare Token 区 ---
         const utStatus = document.getElementById('ut_status');
+        const utEnabledCheckbox = document.getElementById('ut_enabled');
+        
         async function refreshUTStatus(){
             try{
                 if (!window.configManager || !window.configManager.isLoaded) {
@@ -132,7 +141,21 @@
                 const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json().catch(()=>({}));
                 if (res.ok && data && data.success){
-                    utStatus.textContent = '状态：' + (data.is_set ? '已设置' : '未设置');
+                    const isSet = data.is_set || false;
+                    const enabled = data.enabled || false;
+                    utEnabledCheckbox.checked = enabled;
+                    
+                    if (!isSet) {
+                        utStatus.textContent = '状态：未设置';
+                        utEnabledCheckbox.disabled = true;
+                    } else {
+                        utEnabledCheckbox.disabled = false;
+                        if (enabled) {
+                            utStatus.innerHTML = '状态：<span style="color:#10b981;font-weight:500;">✓ 已设置并启用</span>（正在使用你的 API Key）';
+                        } else {
+                            utStatus.innerHTML = '状态：<span style="color:#f59e0b;font-weight:500;">已设置但未启用</span>（使用系统默认）';
+                        }
+                    }
                 } else {
                     utStatus.textContent = '状态：查询失败';
                 }
@@ -146,20 +169,45 @@
             if (!clear && !val){ utStatus.style.color = '#e53e3e'; utStatus.textContent = '请输入有效的 Token'; return; }
             try{
                 const url = window.configManager.getFullApiUrl('/api/user/tushare_token');
+                const payload = clear ? { clear: true } : { token: val, enabled: false }; // 新保存的默认不启用
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify(clear ? { clear: true } : { token: val })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json().catch(()=>({}));
                 if (!res.ok || !data.success) throw new Error(data.detail || '保存失败');
                 utStatus.style.color = '#2f855a';
-                utStatus.textContent = clear ? '已清除' : '保存成功';
+                utStatus.textContent = clear ? '已清除' : '保存成功（默认未启用，请勾选"启用我的 API Key"）';
                 input.value = '';
                 // 保存成功后，无需刷新全局配置；会话重连时将自动带入
             }catch(e){ utStatus.style.color = '#e53e3e'; utStatus.textContent = '保存失败：' + (e.message||e); }
-            finally{ setTimeout(()=>{ utStatus.style.color = '#64748b'; refreshUTStatus(); }, 800); }
+            finally{ setTimeout(()=>{ utStatus.style.color = '#64748b'; refreshUTStatus(); }, 1500); }
         }
+        
+        // 启用开关变化事件
+        utEnabledCheckbox.addEventListener('change', async function() {
+            const enabled = this.checked;
+            try{
+                const url = window.configManager.getFullApiUrl('/api/user/tushare_token');
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                const data = await res.json().catch(()=>({}));
+                if (!res.ok || !data.success) throw new Error(data.detail || '设置失败');
+                utStatus.style.color = '#2f855a';
+                utStatus.textContent = enabled ? '✓ 已启用你的 API Key' : '已禁用，使用系统默认';
+                setTimeout(()=>{ utStatus.style.color = '#64748b'; refreshUTStatus(); }, 800);
+            }catch(e){
+                utStatus.style.color = '#e53e3e';
+                utStatus.textContent = '设置失败：' + (e.message||e);
+                this.checked = !enabled; // 回滚开关状态
+                setTimeout(()=>{ utStatus.style.color = '#64748b'; refreshUTStatus(); }, 1500);
+            }
+        });
+        
         document.getElementById('ut_save').addEventListener('click', ()=>saveUT(false));
         document.getElementById('ut_clear').addEventListener('click', ()=>saveUT(true));
     })();

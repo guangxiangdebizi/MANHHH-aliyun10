@@ -223,11 +223,16 @@ async def websocket_chat(websocket: WebSocket):
         existing_ctx = mcp_agent.session_contexts.get(session_id, {}) or {}
         existing_ctx.update({"user_id": user_id, "username": username})
         # 载入用户的 Tushare Token 到会话上下文（用于下游动态注入到 MCP 请求头）
+        # 仅当用户已启用时才加载
         try:
             if chat_db and user_id:
-                token_val = await chat_db.get_user_tushare_token_by_id(int(user_id))
-                if token_val is not None:
-                    existing_ctx["tushare_token"] = str(token_val).strip()
+                token_data = await chat_db.get_user_tushare_token_by_id(int(user_id))
+                if token_data and token_data.get("enabled") and token_data.get("token"):
+                    existing_ctx["tushare_token"] = str(token_data["token"]).strip()
+                    print(f"✓ 用户 {username} 已启用自定义 Tushare Token")
+                else:
+                    # 确保清除旧的 token（如果用户禁用了）
+                    existing_ctx.pop("tushare_token", None)
         except Exception as _e:
             print(f"⚠️ 读取用户 Tushare Token 失败: {_e}")
         mcp_agent.session_contexts[session_id] = existing_ctx

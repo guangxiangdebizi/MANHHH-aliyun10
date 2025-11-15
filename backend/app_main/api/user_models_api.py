@@ -80,33 +80,67 @@ async def list_user_models(request: Request):
 
 @user_models_router.get("/tushare_token")
 async def get_tushare_token_status(request: Request):
-    """查询当前用户是否已设置 Tushare Token（不返回明文）。"""
+    """查询当前用户是否已设置 Tushare Token 和启用状态（不返回明文）。"""
     chat_db = get_chat_db()
     user = _auth_user_from_request(request)
     try:
         import aiosqlite
         async with aiosqlite.connect(chat_db.db_path) as db:
-            cur = await db.execute("SELECT tushare_token FROM users WHERE id = ?", (int(user["id"]),))
+            cur = await db.execute("SELECT tushare_token, tushare_token_enabled FROM users WHERE id = ?", (int(user["id"]),))
             row = await cur.fetchone()
             token = row[0] if row else None
-            return {"success": True, "is_set": bool((token or '').strip())}
+            enabled = bool(row[1]) if (row and len(row) > 1) else False
+            return {
+                "success": True, 
+                "is_set": bool((token or '').strip()),
+                "enabled": enabled
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查询失败: {e}")
 
 
 @user_models_router.post("/tushare_token")
-async def set_tushare_token(request: Request, payload: dict = Body(default={})):  # { token?: string, clear?: boolean }
-    """设置或清空当前用户的 Tushare Token。"""
+async def set_tushare_token(request: Request, payload: dict = Body(default={})):  # { token?: string, clear?: boolean, enabled?: boolean }
+    """设置或清空当前用户的 Tushare Token，并可设置启用状态。"""
     chat_db = get_chat_db()
     user = _auth_user_from_request(request)
     token = (payload or {}).get("token")
     clear = str((payload or {}).get("clear", "")).strip().lower() in {"1", "true", "yes", "on"}
+    enabled = payload.get("enabled")  # 可选：启用/禁用
+    
     if clear:
         token = None
-    if not clear and not (str(token or '').strip()):
+        enabled = False  # 清除时自动禁用
+    
+    # 仅当既没有 token、也没有 enabled、也不是 clear 时才报错
+    if not clear and not (str(token or '').strip()) and enabled is None:
         raise HTTPException(status_code=400, detail="token 不能为空，或使用 clear=true 清除")
+    
+    # 如果只是切换启用状态（没有提供 token），则只更新 enabled 字段
+    if enabled is not None and not token and not clear:
+        # 仅更新启用状态
+        try:
+            ok = await chat_db.set_user_tushare_token(
+                int(user["id"]), 
+                None,  # 不修改 token
+                enabled,
+                only_update_enabled=True  # 关键：只更新启用状态
+            )
+            if not ok:
+                raise HTTPException(status_code=500, detail="保存失败")
+            return {"success": True}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"保存失败: {e}")
+    
+    # 保存或清除 token
     try:
-        ok = await chat_db.set_user_tushare_token(int(user["id"]), (str(token).strip() if token else None))
+        ok = await chat_db.set_user_tushare_token(
+            int(user["id"]), 
+            (str(token).strip() if token else None),
+            enabled if enabled is not None else None
+        )
         if not ok:
             raise HTTPException(status_code=500, detail="保存失败")
         return {"success": True}

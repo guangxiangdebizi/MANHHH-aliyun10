@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MANHHH 项目数据分析报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        .header .timestamp {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-container img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .top-users {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .top-users table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .top-users th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .top-users td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .top-users tr:hover {
+            background: #e9ecef;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 MANHHH 项目数据分析报告</h1>
+            <p class="timestamp">生成时间: 2025-11-15T06:45:27.778488</p>
+        </div>
+        
+        <div class="content">
+            <!-- 用户统计 -->
+            <div class="section">
+                <h2>👥 用户统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">总用户数</div>
+                        <div class="value">414</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">有邮箱用户</div>
+                        <div class="value">414</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">配置 Tushare Token</div>
+                        <div class="value">10</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">启用 Tushare Token</div>
+                        <div class="value">1</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">最近7天新增</div>
+                        <div class="value">1</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">最近30天新增</div>
+                        <div class="value">79</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">平均积分</div>
+                        <div class="value">48.15</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">最高积分</div>
+                        <div class="value">975</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">用户增长趋势</div>
+                    <img src="user_growth.png" alt="用户增长趋势">
+                </div>
+            </div>
+            
+            <!-- 聊天统计 -->
+            <div class="section">
+                <h2>💬 聊天统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">总会话数</div>
+                        <div class="value">1343</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">总对话数</div>
+                        <div class="value">1747</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">总消息数</div>
+                        <div class="value">2341</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">人均消息数</div>
+                        <div class="value">4.75</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">最近7天消息</div>
+                        <div class="value">39</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">最近30天消息</div>
+                        <div class="value">374</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">聊天活跃度 (最近30天)</div>
+                    <img src="chat_activity.png" alt="聊天活跃度">
+                </div>
+            </div>
+            
+            <!-- 最活跃用户 -->
+            <div class="section">
+                <h2>🏆 最活跃用户 TOP 10</h2>
+                <div class="top-users">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>用户名</th>
+                                <th>消息数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                                <td>#1</td>
+                                <td>gg</td>
+                                <td><strong>61</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#2</td>
+                                <td>jigme</td>
+                                <td><strong>42</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#3</td>
+                                <td>boonhangtai</td>
+                                <td><strong>29</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#4</td>
+                                <td>ugd26mf1g6</td>
+                                <td><strong>28</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#5</td>
+                                <td>kkcldc</td>
+                                <td><strong>25</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#6</td>
+                                <td>manhahaha</td>
+                                <td><strong>25</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#7</td>
+                                <td>A1</td>
+                                <td><strong>24</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#8</td>
+                                <td>yc123456</td>
+                                <td><strong>24</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#9</td>
+                                <td>qxy</td>
+                                <td><strong>23</strong> 条</td>
+                            </tr>
+
+                            <tr>
+                                <td>#10</td>
+                                <td>Ppdnn</td>
+                                <td><strong>21</strong> 条</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 词云和工具统计 -->
+            <div class="section">
+                <h2>☁️ 用户提问词云</h2>
+                <div class="chart-container">
+                    <img src="questions_wordcloud.png" alt="用户提问词云">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🔧 工具使用统计</h2>
+                <div class="chart-container">
+                    <img src="tool_usage.png" alt="工具使用统计">
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>MANHHH 项目数据分析系统 | 自动生成于 2025-11-15 06:46:29</p>
+        </div>
+    </div>
+</body>
+</html>
